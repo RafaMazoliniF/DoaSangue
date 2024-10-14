@@ -1,0 +1,7 @@
+<h1>Confirmar Exclusão</h1>
+<p>Tem certeza de que deseja excluir {{ cadastro.nome }}?</p>
+<form method="POST">
+    {% csrf_token %}
+    <button type="submit">Confirmar</button>
+</form>
+<a href="{% url 'cadastro_list' %}">Cancelar</a>

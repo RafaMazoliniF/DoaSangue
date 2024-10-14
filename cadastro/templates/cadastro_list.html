@@ -1,0 +1,10 @@
+<h1>Lista de Cadastros</h1>
+<a href="{% url 'cadastro_create' %}">Novo Cadastro</a>
+<ul>
+    {% for cadastro in cadastros %}
+        <li>{{ cadastro.nome }} - {{ cadastro.email }} - {{ cadastro.idade }}
+            <a href="{% url 'cadastro_update' cadastro.pk %}">Editar</a>
+            <a href="{% url 'cadastro_delete' cadastro.pk %}">Excluir</a>
+        </li>
+    {% endfor %}
+</ul>

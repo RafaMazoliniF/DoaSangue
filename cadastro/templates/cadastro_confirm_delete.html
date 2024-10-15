@@ -1,7 +1,21 @@
-<h1>Confirmar Exclusão</h1>
-<p>Tem certeza de que deseja excluir {{ cadastro.nome }}?</p>
-<form method="POST">
-    {% csrf_token %}
-    <button type="submit">Confirmar</button>
-</form>
-<a href="{% url 'cadastro_list' %}">Cancelar</a>
+{% extends 'base.html' %}
+
+{% block title %}Confirmar Exclusão{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="text-center mb-4">Confirmar Exclusão</h1>
+    <div class="alert alert-warning text-center" role="alert">
+        Tem certeza de que deseja excluir <strong>{{ cadastro.nome }}</strong>?
+    </div>
+    <div class="row justify-content-center">
+        <div class="col-md-4">
+            <form method="POST">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger w-100">Confirmar</button>
+            </form>
+            <a href="{% url 'cadastro_list' %}" class="btn btn-secondary w-100 mt-2">Cancelar</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

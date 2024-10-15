@@ -1,10 +1,45 @@
-<h1>Lista de Cadastros</h1>
-<a href="{% url 'cadastro_create' %}">Novo Cadastro</a>
-<ul>
-    {% for cadastro in cadastros %}
-        <li>{{ cadastro.nome }} - {{ cadastro.email }} - {{ cadastro.idade }}
-            <a href="{% url 'cadastro_update' cadastro.pk %}">Editar</a>
-            <a href="{% url 'cadastro_delete' cadastro.pk %}">Excluir</a>
-        </li>
-    {% endfor %}
-</ul>
+{% extends 'base.html' %}
+
+{% block title %}Lista de Cadastros{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="text-center mb-4">Lista de Cadastros</h1>
+    
+    <div class="text-right mb-3">
+        <a href="{% url 'cadastro_create' %}" class="btn btn-primary">Novo Cadastro</a>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>Idade</th>
+                    <th>Senha</th>  <!-- Adiciona a coluna de Senha -->
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cadastro in cadastros %}
+                <tr>
+                    <td>{{ cadastro.nome }}</td>
+                    <td>{{ cadastro.email }}</td>
+                    <td>{{ cadastro.idade }}</td>
+                    <td>{{ cadastro.senha }}</td>  <!-- Exibe a senha -->
+                    <td>
+                        <a href="{% url 'cadastro_update' cadastro.pk %}" class="btn btn-warning btn-sm">Editar</a>
+                        <a href="{% url 'cadastro_delete' cadastro.pk %}" class="btn btn-danger btn-sm">Excluir</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center">Nenhum cadastro encontrado.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

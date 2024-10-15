@@ -6,7 +6,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('cadastro/', include('cadastro.urls')),  # Inclui as URLs da app cadastro
         # URL de login
-    path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
+    path('', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
     
     # URL de logout
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),

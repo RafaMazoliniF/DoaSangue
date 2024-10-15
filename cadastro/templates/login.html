@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<form method="POST" action="{% url 'login_submit' %}">
+    {% csrf_token %}
+    <div class="form-group">
+        <label for="nome">Nome:</label>
+        <input type="text" name="nome" class="form-control" id="nome" required>
+    </div>
+    <div class="form-group">
+        <label for="senha">Senha:</label>
+        <input type="password" name="senha" class="form-control" id="senha" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Entrar</button>
+</form>
+<div class="text-center mt-3">
+    <p>Ainda não tem uma conta? <a href="{% url 'cadastro_create' %}">Cadastre-se aqui</a></p>
+</div>
+{% endblock %}

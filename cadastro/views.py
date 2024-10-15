@@ -1,6 +1,31 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import Cadastro
 from .forms import CadastroForm
+from django.contrib import messages
+
+def login_view(request):
+    if request.method == 'POST':
+        # Obtendo os dados do formulário
+        nome = request.POST.get('nome')
+        senha = request.POST.get('senha')
+
+        # Autenticar o usuário
+        try:
+            usuario = Cadastro.objects.get(nome=nome)
+            if usuario.senha == senha:  # Verifique a senha (use hashing para produção)
+                # Fazer login do usuário (aqui você pode usar sessões ou qualquer outro método)
+                request.session['usuario_id'] = usuario.id  # Salve o ID do usuário na sessão
+                return redirect('cadastro_list')  # Redirecionar para a página inicial ou outra página após o login
+            else:
+                messages.error(request, 'Nome ou senha inválidos.')
+        except Cadastro.DoesNotExist:
+            messages.error(request, 'Nome ou senha inválidos.')
+
+    # Verificar se o parâmetro 'redirect_to_register' está presente na URL
+    if 'redirect_to_register' in request.GET:
+        return redirect('register')  # Redirecionar para a página de cadastro
+
+    return render(request, 'login.html')  # Renderize o template de login
 
 # Exibir lista de cadastros
 def cadastro_list(request):

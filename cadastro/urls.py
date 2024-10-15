@@ -6,4 +6,5 @@ urlpatterns = [
     path('new/', views.cadastro_create, name='cadastro_create'),
     path('<int:pk>/edit/', views.cadastro_update, name='cadastro_update'),
     path('<int:pk>/delete/', views.cadastro_delete, name='cadastro_delete'),
+    path('login', views.login_view, name='login_submit')
 ]

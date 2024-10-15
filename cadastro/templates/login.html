@@ -3,7 +3,7 @@
 {% block title %}Login{% endblock %}
 
 {% block content %}
-<form method="POST">
+<form method="POST" action="{% url 'login_submit' %}">
     {% csrf_token %}
     <div class="form-group">
         <label for="nome">Nome:</label>

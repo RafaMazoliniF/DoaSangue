@@ -59,7 +59,7 @@ def cadastro_create(request):
         form = CadastroForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('cadastro_list')
+            return redirect('login')
     else:
         form = CadastroForm()
     return render(request, 'cadastro_form.html', {'form': form})

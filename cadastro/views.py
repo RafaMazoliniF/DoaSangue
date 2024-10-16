@@ -46,7 +46,7 @@ def logout_view(request):
     # Realiza o logout do usuário
     logout(request)
     # Redireciona para a página de login ou outra página de sua escolha
-    return redirect('login')
+    return redirect('logout')
 
 # Exibir lista de cadastros
 def cadastro_list(request):

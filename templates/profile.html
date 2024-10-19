@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil do Usuário</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .profile-container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #555;
+            text-align: left;
+        }
+
+        input[type="full_name"],
+        input[type="email"],
+        input[type="password"],
+        input[type="dob"] {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        input[readonly] {
+            background-color: #f7f7f7;
+            color: #888;
+        }
+
+        #edit-btn, #logout-btn, #book-btn{
+            width: 100%;
+            padding: 10px;
+            margin-top: 15px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #edit-btn {
+            background-color: #007bff;
+        }
+
+        #edit-btn:hover {
+            background-color: #0056b3;
+        }
+
+        #save-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 15px;
+            background-color: #28a745;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            display: none;
+        }
+
+        #save-btn:hover {
+            background-color: #218838;
+        }
+
+        #logout-btn {
+            background-color: #dc3545;
+            margin-top: 15px;
+        }
+
+        #logout-btn:hover {
+            background-color: #c82333;
+        }
+
+        #book-btn {
+            background-color: #28a745; 
+            margin-top: 15px;
+        }
+
+        #book-btn:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="profile-container">
+        <h2>Olá, {{ full_name }}!</h2>
+
+        <form method="POST">
+            <label for="full_name">Nome</label>
+            <input type="full_name" id="full_name" name="full_name" value="{{ full_name }}" readonly>
+
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="{{ email }}" readonly>
+
+            <label for="password">Senha</label>
+            <input type="password" id="password" name="password" value="{{ password }}" readonly>
+
+            <label for="dob">Data de Nascimento (DD/MM/AAAA)</label>
+            <input type="dob" id="dob" name="dob" value="{{ dob }}" readonly>
+            
+            <button type="button" id="edit-btn" onclick="enableEdit()">Atualizar Dados</button>
+
+            <input type="submit" id="save-btn" value="Salvar Alterações">
+
+        </form>
+        <form action="{{ url_for('booking') }}" method="GET">
+            <button type="submit" id="book-btn">Agendar doação</button>
+        </form>
+
+        <form action="{{ url_for('logout') }}" method="GET">
+            <button type="submit" id="logout-btn">Logout</button>
+        </form>
+    </div>
+
+    <script>
+        function enableEdit() {
+            document.getElementById('full_name').readOnly = false;
+            document.getElementById('password').readOnly = false;
+            document.getElementById('dob').readOnly = false;
+
+            document.getElementById('save-btn').style.display = 'block';
+            document.getElementById('edit-btn').style.display = 'none';
+        }
+    </script>
+
+</body>
+</html>

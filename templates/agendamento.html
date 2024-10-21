@@ -25,6 +25,25 @@
             max-width: 400px;
             width: 100%;
             text-align: center;
+            position: relative;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            text-decoration: none;
+            color: #555;
+            font-size: 18px;
+            display: inline-block;
+        }
+
+        .back-button i {
+            margin-right: 5px;
+        }
+
+        .back-button:hover {
+            color: #2c2c2c;
         }
 
         h2 {
@@ -49,22 +68,7 @@
             box-sizing: border-box;
         }
 
-        button {
-            width: 100%;
-            padding: 10px;
-            background-color: #28a745;
-            border: none;
-            border-radius: 5px;
-            color: white;
-            font-size: 16px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background-color: #218838;
-        }
-        
-        input[type="submit"] {
+        button, input[type="submit"] {
             width: 100%;
             padding: 10px;
             background-color: #28a745;
@@ -76,14 +80,14 @@
             margin-top: 10px;
         }
 
-        input[type="submit"]:hover {
+        button:hover, input[type="submit"]:hover {
             background-color: #218838;
         }
 
         .info {
             margin-top: 10px;
             text-align: left;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
         }
 
         .info div {
@@ -103,37 +107,81 @@
             margin-top: 10px;
             text-align: center;
         }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            text-align: left;
+            justify-content: flex-start; 
+        }
+
+        .checkbox-container input {
+            margin-right: 10px;
+        }
+
+        .checkbox-container a {
+            color: #007bff;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .checkbox-container a:hover {
+            color: #0056b3;
+        }
+
+        .error {
+            color: red;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <a href="{{ url_for('profile', full_name=session['full_name']) }}" class="back-button">
+            <i class="fas fa-arrow-left"></i>
+        </a>
         <i class="fas fa-calendar-alt icon"></i>
         <h2>Agendamento de Doação</h2>
         <form action="/booking" method="POST">
             <label for="clinica" style="display:none;">Escolha a Clínica</label>
             <select id="clinica" name="clinica" required onchange="showInfo()">
-                <option value="" disabled selected>Escolha a Clínica</option>
-                <option value="clinica_1" data-telefone="0800-722-8432" data-local="Rua Carlos Chagas, 480, Cidade Universitária, “Zeferino Vaz”" data-horario="Seg a Sáb (Inclusive em feriados): 7:30h - 15:00h">Posto Unicamp - Hemocentro</option>
-                <option value="clinica_2" data-telefone="(19) 3272-5501" data-local="Av. Prefeito Faria Lima, 340 Pq. Itália" data-horario="Seg a Sáb (inclusive em feriados): 7:30h – 15:00h">Posto Mário Gatti - Hospital Municipal Dr. Mário Gatti</option>
-                <!-- <option value="clinica_3" data-telefone="(11) 3333-3333" data-local="Rua C, 789" data-horario="Seg a Sáb: 7:30h - 12:00h">Clínica Mente</option> -->
+                <option value="" disabled selected>Selecione a Clínica</option> 
+                {% for clinica in clinicas %}
+                    <option value="{{ clinica[0] }}" data-telefone="{{ clinica[1] }}" data-local="{{ clinica[2] }}" data-horario="{{ clinica[3] }}">
+                        {{ clinica[0] }}
+                    </option>
+                {% endfor %}
             </select>
-        </form> 
 
-        <div class="info" id="clinic-info" style="display: none;">
-            <div id="telefone"><i class="fas fa-phone"></i>      </div>
-            <div id="local"><i class="fas fa-map-marker-alt"></i>      </div>
-            <div id="tempo"><i class="fas fa-clock"></i>      </div>
-        </div>
+            <div class="info" id="clinic-info" style="display: none;">
+                <div id="telefone"><i class="fas fa-phone"></i></div>
+                <div id="local"><i class="fas fa-map-marker-alt"></i></div>
+                <div id="tempo"><i class="fas fa-clock"></i></div>
+            </div>
 
-        <input type="submit" value="Salvar agendamento">
-        {% if success_message %}
+            <div class="checkbox-container">
+                <input type="checkbox" id="terms" name="terms">
+                <label for="terms" style="margin-top: 20px;">Ciente dos <a href="https://www.gov.br/saude/pt-br/composicao/saes/sangue" target="_blank">critérios de doação</a> e que estou apto(a) a doar sangue.</label>
+            </div>
+
+            {% if error_checkbox %}
+                <div class="error">{{ error_checkbox }}</div>  
+            {% endif %}
+
+            {% if error_clinica %}
+                <div class="error">{{ error_clinica }}</div>  
+            {% endif %}
+
+            <input type="submit" value="Salvar agendamento">
+            {% if success_message %}
                 <div class="success">{{ success_message }}</div>
                 <script>
                     setTimeout(function() {
-                        window.location.href = "{{ url_for('profile') }}";
+                        window.location.href = "{{ url_for('profile', full_name=session['full_name']) }}";
                     }, 2000);  
                 </script>
-        {% endif %}
+            {% endif %}
+        </form>
     </div>
 
     <script>

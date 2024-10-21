@@ -67,6 +67,17 @@
             cursor: pointer;
         }
 
+        #hist-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 15px;
+            border: none;
+            border-radius: 5px;
+            color: black;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
         #edit-btn {
             background-color: #007bff;
         }
@@ -109,6 +120,15 @@
         #book-btn:hover {
             background-color: #218838;
         }
+
+        #hist-btn {
+            background-color: #f1ee2f; 
+            margin-top: 15px;
+        }
+
+        #hist-btn:hover {
+            background-color: #c5c329;
+        }
     </style>
 </head>
 <body>
@@ -136,6 +156,10 @@
         </form>
         <form action="{{ url_for('booking') }}" method="GET">
             <button type="submit" id="book-btn">Agendar doação</button>
+        </form>
+
+        <form action="{{ url_for('historic') }}" method="GET">
+            <button type="submit" id="hist-btn">Histórico de doações</button>
         </form>
 
         <form action="{{ url_for('logout') }}" method="GET">

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico de Agendamentos</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet"> <!-- Adicionando Font Awesome -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .history-container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+        }
+
+        h2 {
+            color: #333;
+            text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        td {
+            background-color: #fafafa;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            color: red;
+            font-size: 18px;
+            display: block;
+            margin: 0 auto; 
+        }
+
+        .delete-btn:hover {
+            color: darkred;
+        }
+
+        .no-history {
+            text-align: center;
+            color: #777;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            text-decoration: none;
+            color: #555;
+            font-size: 18px;
+            display: inline-block;
+        }
+
+        .back-button i {
+            margin-right: 5px;
+        }
+
+        .back-button:hover {
+            color: #2c2c2c;
+        }
+
+        .icon {
+            font-size: 50px;
+            color: red;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="history-container">
+        <a href="{{ url_for('profile', full_name=session['full_name']) }}" class="back-button">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <i class="fas fa-history icon"></i>
+        <h2>Histórico de Agendamentos</h2>
+        {% if history %}
+            <table>
+                <tr>
+                    <td>Clínica</td>
+                    <td>Data</td>
+                </tr>
+                {% for item in history %}
+                    <tr>
+                        <td>{{ history[0] }}</td>
+                    </tr>
+                {% endfor %}
+                {% for item in date %}
+                    <tr>
+                        <td>{{ date[0] }}</td>
+                    </tr>
+                {% endfor %}
+            </table>
+        {% endif %}
+        <p class="no-history">Nenhum agendamento encontrado</p>
+    </div>
+</body>
+</html>

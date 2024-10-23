@@ -8,9 +8,9 @@ app.secret_key = "senhasecreta"
 def init_db():
     con = sqlite3.connect('users.db')
     c = con.cursor()
-    c.execute("CREATE TABLE IF NOT EXISTS users (full_name TEXT, password TEXT, email TEXT, dob TEXT, clinicas_id TEXT, FOREIGN KEY (clinicas_id) REFERENCES clinicas(id) ON DELETE SET NULL)")
+    c.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT, password TEXT, email TEXT, dob TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS clinicas (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL UNIQUE, telefone TEXT, endereco TEXT, horario TEXT)")
-    c.execute("CREATE TABLE IF NOT EXISTS agendamentos (id INTEGER PRIMARY KEY AUTOINCREMENT, FOREIGN KEY (clinicas_id) REFERENCES clinicas(id) ON DELETE SET NULL, FOREIGN KEY (users) REFERENCES users(id) ON DELETE SET NULL, date TEXT ON DELETE SET NULL)")
+    c.execute("CREATE TABLE IF NOT EXISTS agendamentos (users_id INTEGER, clinicas_id INTEGER, date TEXT, observacao TEXT, FOREIGN KEY (clinicas_id) REFERENCES clinicas(id) ON DELETE SET NULL, FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE SET NULL)")
     c.execute("INSERT OR REPLACE INTO sqlite_sequence (name, seq) VALUES ('clinicas', 0)")
     con.commit()
     con.close()
@@ -68,7 +68,7 @@ def register():
                 if c.fetchone() is not None:
                     error_user = "Usuário já existe!"
                 else:
-                    c.execute("INSERT INTO users VALUES (?,?,?,?,NULL)", (full_name, password, email, dob))
+                    c.execute("INSERT INTO users VALUES (?,?,?,?,?)", (None, full_name, password, email, dob))
                     con.commit()
                     success_message = "Cadastro realizado com sucesso!"
                     return render_template('register.html', success_message=success_message)
@@ -95,44 +95,48 @@ def login():
         if user is None:
             error_login = "Email ou senha incorretos"
         else:
-            full_name = user[0]
             session['email'] = email
-            session['full_name'] = full_name
+            session['full_name'] = user[1]
+            session['user_id'] = user[0]  
             con.close()
-            return redirect(url_for('profile', full_name=full_name))  
+            return redirect(url_for('profile', user_id=user[0]))  
     con.close()
     return render_template('login.html', error_login=error_login)
 
-@app.route('/profile/<full_name>', methods=['GET', 'POST'])
-def profile(full_name):
+
+@app.route('/profile', methods=['GET', 'POST'])
+def profile():
+    user_id = session.get('user_id')  
+    if not user_id:
+        return redirect(url_for('login'))  
+
     con = sqlite3.connect('users.db')
     c = con.cursor()
 
-    c.execute("SELECT * FROM users WHERE full_name=?", (full_name,))
+    c.execute("SELECT * FROM users WHERE id=?", (user_id,))
     user_data = c.fetchone()
 
     if user_data is None:
         con.close()
         return "Usuário não encontrado", 404
 
-    success_message = None  
+    success_message = None
 
     if request.method == 'POST':
         att_full_name = request.form['full_name']
         password = request.form['password']
         dob = request.form['dob']
 
-        if att_full_name != user_data[0] or password != user_data[1] or dob != user_data[3]:
-            c.execute("UPDATE users SET full_name=?, password=?, dob=? WHERE full_name=?", (att_full_name, password, dob, full_name))
+        if att_full_name != user_data[1] or password != user_data[2] or dob != user_data[3]:
+            c.execute("UPDATE users SET full_name=?, password=?, dob=? WHERE id=?", (att_full_name, password, dob, user_id))
             con.commit()
             success_message = "Dados atualizados com sucesso!"
-            full_name = att_full_name 
-            user_data = (att_full_name, password, user_data[2], dob)  
+            user_data = (user_id, att_full_name, password, user_data[3], dob)
         else:
             success_message = "Nenhuma alteração detectada."
 
     con.close()
-    return render_template('profile.html', full_name=user_data[0], email=user_data[2], dob=user_data[3], password=user_data[1], success_message=success_message)
+    return render_template('profile.html', full_name=user_data[1], email=user_data[3], dob=user_data[4], password=user_data[2], success_message=success_message)
 
 @app.route('/booking', methods=['GET', 'POST'])
 def booking():
@@ -142,6 +146,7 @@ def booking():
     success_message = None
     error_checkbox = None
     error_clinica = None
+    error_date = None
 
     email = session.get('email')
 
@@ -150,65 +155,71 @@ def booking():
 
     if request.method == 'POST':
         clinica = request.form.get('clinica')  
-        check_box = 'terms' in request.form  
+        check_box = 'terms' in request.form
+        date_str = request.form.get('data')  
+        observation = request.form.get('observacao')  
 
-        if clinica:  
-            if check_box:  
-                c.execute("SELECT id FROM clinicas WHERE nome=?", (clinica,))
-                clinica_id = c.fetchone()
+        if clinica and date_str:
+            try:
+                booking_date = datetime.strptime(date_str, '%Y-%m-%d')
+                today = datetime.today()
 
-                if clinica_id:
-                    clinica_id = str(clinica_id[0])  
-
-                    c.execute("SELECT clinicas_id FROM users WHERE email=?", (email,))
-                    result = c.fetchone()
-                    
-                    if result is None or result[0] is None:
-                        new_clinicas = clinica_id 
-                    else:
-                        indb_clinicas = result[0]
-                        new_clinicas = f"{indb_clinicas},{clinica_id}"  
-                    
-                    c.execute("UPDATE users SET clinicas_id = ? WHERE email = ?", (new_clinicas, email))
-                    con.commit()
-
-                    success_message = "Agendamento salvo com sucesso!"
-                    return render_template('agendamento.html', clinicas=clinicas, success_message=success_message)
+                if booking_date.date() <= today.date():
+                    error_date = "A data do agendamento deve ser no futuro."
                 else:
-                    error_clinica = "Clínica selecionada não existe!"
-            else:
-                error_checkbox = "Você precisa estar ciente dos critérios de doação!"
-        else:
-            error_clinica = "Você precisa escolher uma clínica!"
+                    if check_box:
+                        c.execute("SELECT id FROM clinicas WHERE nome=?", (clinica,))
+                        clinica_id = c.fetchone()
 
-    return render_template('agendamento.html', clinicas=clinicas, success_message=success_message, error_checkbox=error_checkbox, error_clinica=error_clinica)
+                        if clinica_id:
+                            clinica_id = clinica_id[0]
+
+                            c.execute("SELECT id FROM users WHERE email=?", (email,))
+                            result = c.fetchone()
+                            result_id = result[0]
+
+                            c.execute("INSERT INTO agendamentos (users_id, clinicas_id, date, observacao) VALUES (?, ?, ?, ?)", 
+                                (result_id, clinica_id, date_str, observation))
+                            con.commit()
+
+                            success_message = "Agendamento salvo com sucesso!"
+                            return render_template('agendamento.html', clinicas=clinicas, success_message=success_message)
+                        else:
+                            error_clinica = "Clínica selecionada não existe!"
+                    else:
+                        error_checkbox = "Você precisa estar ciente dos critérios de doação!"
+            except ValueError:
+                error_date = "Formato de data inválido. Use o formato AAAA-MM-DD."
+        else:
+            error_clinica = "Você precisa escolher uma clínica e fornecer uma data!"
+
+    return render_template('agendamento.html', clinicas=clinicas, success_message=success_message, error_checkbox=error_checkbox, error_clinica=error_clinica, error_date=error_date)
 
 @app.route('/historic')
 def historic():
     con = sqlite3.connect('users.db')
     c = con.cursor()
-    message_none_clinicas = ""
+
     email = session.get('email')
     history = []
 
-    c.execute("SELECT clinicas_id FROM users WHERE email=?", (email,))
-    tuple_clinicas_ids = c.fetchone() #pega tupla ("1,2,1")
+    c.execute("SELECT id FROM users WHERE email=?", (email,))
+    user_id = c.fetchone()
 
-    if tuple_clinicas_ids and tuple_clinicas_ids[0]:
-        clinicas_id_list = tuple_clinicas_ids[0].split(',') 
-        clinicas_id_list = [int(clinica_id) for clinica_id in clinicas_id_list]  #[1, 2, 1]
-    else:
-        clinicas_id_list = []
+    if user_id:
+        user_id = user_id[0]
+
+        c.execute("SELECT clinicas.nome, agendamentos.date FROM agendamentos JOIN clinicas ON agendamentos.clinicas_id = clinicas.id WHERE agendamentos.users_id = ?", (user_id,))
+        history = [(nome, datetime.strptime(date, '%Y-%m-%d').strftime('%d/%m/%Y')) for nome, date in c.fetchall()]  
+
+    con.close()
+
+    if not history:
         message_none_clinicas = "Seu histórico está vazio!"
+    else:
+        message_none_clinicas = None
 
-    for clinica_id in clinicas_id_list:
-        c.execute("SELECT nome FROM clinicas WHERE id=?", (clinica_id,))
-        history_result = c.fetchone()
-        if history_result:  
-            history.append(history_result[0])
-
-    return render_template('historic.html', history=history, date=date)
-
+    return render_template('historic.html', history=history, message_none_clinicas=message_none_clinicas)
 
 @app.route('/logout')
 def logout():

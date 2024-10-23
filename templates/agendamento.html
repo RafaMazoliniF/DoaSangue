@@ -28,6 +28,24 @@
             position: relative;
         }
 
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        input[type="date"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
         .back-button {
             position: absolute;
             top: 20px;
@@ -159,6 +177,12 @@
                 <div id="tempo"><i class="fas fa-clock"></i></div>
             </div>
 
+            <label for="data" style="display: block; text-align: left; margin-top: 15px;">Data do Agendamento</label>
+            <input type="date" id="data" name="data" required min="{{ current_date }}">
+
+            <label for="observacao" style="display: block; text-align: left; margin-top: 30px;">Observação</label>
+            <textarea id="observacao" name="observacao" rows="4" placeholder="Adicione uma observação (opcional)"></textarea>
+
             <div class="checkbox-container">
                 <input type="checkbox" id="terms" name="terms">
                 <label for="terms" style="margin-top: 20px;">Ciente dos <a href="https://www.gov.br/saude/pt-br/composicao/saes/sangue" target="_blank">critérios de doação</a> e que estou apto(a) a doar sangue.</label>
@@ -170,6 +194,10 @@
 
             {% if error_clinica %}
                 <div class="error">{{ error_clinica }}</div>  
+            {% endif %}
+
+            {% if error_date %}
+                <div class="error">{{ error_date }}</div>
             {% endif %}
 
             <input type="submit" value="Salvar agendamento">
@@ -199,6 +227,8 @@
 
             document.getElementById('clinic-info').style.display = 'block';
         }
+
+        document.getElementById('data').min = new Date().toISOString().split('T')[0];
     </script>
 
 </body>

@@ -50,6 +50,7 @@
 
         th {
             background-color: #f2f2f2;
+            white-space: nowrap;
         }
 
         td {
@@ -112,23 +113,24 @@
         <h2>Histórico de Agendamentos</h2>
         {% if history %}
             <table>
-                <tr>
-                    <td>Clínica</td>
-                    <td>Data</td>
-                </tr>
-                {% for item in history %}
+                <thead>
                     <tr>
-                        <td>{{ history[0] }}</td>
+                        <th>Clínica</th>
+                        <th>Data do agendamento</th>
                     </tr>
-                {% endfor %}
-                {% for item in date %}
+                </thead>
+                <tbody>
+                    {% for clinic, date in history %}
                     <tr>
-                        <td>{{ date[0] }}</td>
+                        <td>{{ clinic }}</td>
+                        <td>{{ date }}</td>
                     </tr>
-                {% endfor %}
+                    {% endfor %}
+                </tbody>
             </table>
+        {% else %}
+            <p class="no-history">Nenhum agendamento encontrado</p>
         {% endif %}
-        <p class="no-history">Nenhum agendamento encontrado</p>
     </div>
 </body>
 </html>

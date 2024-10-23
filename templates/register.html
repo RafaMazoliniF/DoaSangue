@@ -153,6 +153,7 @@
 
             <label for="dob">Data de nascimento (DD/MM/YYYY)</label>
             <input type="text" id="dob" name="dob" value="{{ dob }}" required oninput="formatDate(this)">
+
             {% if error_dob %}
                 <div class="error">{{ error_dob }}</div>  
             {% endif %}
@@ -183,7 +184,7 @@
 
         function formatDate(input) {
             let value = input.value.replace(/\D/g, '');
-
+            
             if (value.length > 2) {
                 value = value.slice(0, 2) + '/' + value.slice(2);
             }

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adicionar Doação</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .form-container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 100%;
+            position: relative;
+        }
+
+        h2 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        select, input[type="date"], input[type="text"], button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .success-message {
+            color: green;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .error-message {
+            color: red;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            text-decoration: none;
+            color: #555;
+            font-size: 18px;
+            display: inline-block;
+        }
+
+        .back-button i {
+            margin-right: 5px;
+        }
+
+        .back-button:hover {
+            color: #2c2c2c;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <a href="{{ url_for('profile', full_name=session['full_name']) }}" class="back-button">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h2>Adicionar Doação</h2>
+
+        {% if success_message %}
+            <p class="success-message">{{ success_message }}</p>
+        {% endif %}
+
+        <form method="POST" action="">
+            <label for="clinica">Selecione a Clínica:</label>
+            <select id="clinica" name="clinica" required>
+                {% for clinica in clinicas %}
+                    <option value="{{ clinica[0] }}">{{ clinica[0] }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="data">Data da Doação:</label>
+            <input type="date" id="data" name="data" required>
+
+            <label for="observacao">Observação:</label>
+            <input type="text" id="observacao" name="observacao">
+
+            <button type="submit">Adicionar Doação</button>
+            {% if success_message %}
+                <div class="success">{{ success_message }}</div>
+                <script>
+                    setTimeout(function() {
+                        window.location.href = "{{ url_for('historic') }}";
+                    }, 2000);  
+                </script>
+            {% endif %}
+        </form>
+
+        {% if error_date %}
+            <p class="error-message">{{ error_date }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>

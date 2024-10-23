@@ -109,27 +109,35 @@
         <a href="{{ url_for('profile', full_name=session['full_name']) }}" class="back-button">
             <i class="fas fa-arrow-left"></i>
         </a>
+        
         <i class="fas fa-history icon"></i>
-        <h2>Histórico de Agendamentos</h2>
+        <h2>Histórico de Doações</h2>
+        <a href="{{ url_for('add_donation', donation_id=donation_id) }}">Registrar Doação</a>
         {% if history %}
             <table>
                 <thead>
                     <tr>
                         <th>Clínica</th>
                         <th>Data do agendamento</th>
+                        <th>Ação</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for clinic, date in history %}
+                    {% for clinic, date, donation_id in history %}
                     <tr>
                         <td>{{ clinic }}</td>
                         <td>{{ date }}</td>
+                        <td>
+                            <a href="{{ url_for('edit_donation', donation_id=donation_id) }}">Editar</a>
+                            <a href="{{ url_for('delete_donation', donation_id=donation_id) }}" style="color:red;">Excluir</a>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
+                
             </table>
         {% else %}
-            <p class="no-history">Nenhum agendamento encontrado</p>
+            <p class="no-history">Nenhuma doação encontrado</p>
         {% endif %}
     </div>
 </body>

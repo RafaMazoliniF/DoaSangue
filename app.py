@@ -201,25 +201,105 @@ def historic():
     c = con.cursor()
 
     email = session.get('email')
-    history = []
 
     c.execute("SELECT id FROM users WHERE email=?", (email,))
-    user_id = c.fetchone()
+    user_id = c.fetchone()[0]
 
-    if user_id:
-        user_id = user_id[0]
-
-        c.execute("SELECT clinicas.nome, agendamentos.date FROM agendamentos JOIN clinicas ON agendamentos.clinicas_id = clinicas.id WHERE agendamentos.users_id = ?", (user_id,))
-        history = [(nome, datetime.strptime(date, '%Y-%m-%d').strftime('%d/%m/%Y')) for nome, date in c.fetchall()]  
+    c.execute("SELECT clinicas.nome, agendamentos.date, agendamentos.rowid FROM agendamentos JOIN clinicas ON agendamentos.clinicas_id = clinicas.id WHERE agendamentos.users_id = ?", (user_id,))
+    history = [(nome, datetime.strptime(date, '%Y-%m-%d').strftime('%d/%m/%Y'), rowid) for nome, date, rowid in c.fetchall()]
 
     con.close()
 
-    if not history:
-        message_none_clinicas = "Seu histórico está vazio!"
-    else:
-        message_none_clinicas = None
+    return render_template('historic.html', history=history)
 
-    return render_template('historic.html', history=history, message_none_clinicas=message_none_clinicas)
+@app.route('/add_donation', methods=['GET', 'POST'])
+def add_donation():
+    con = sqlite3.connect('users.db')
+    c = con.cursor()
+
+    email = session.get('email')
+
+    c.execute("SELECT nome FROM clinicas")
+    clinicas = c.fetchall()
+
+    success_message = None
+    error_date = None
+
+    if request.method == 'POST':
+        clinica = request.form.get('clinica')
+        date_str = request.form.get('data')
+        observation = request.form.get('observacao')
+
+        if clinica and date_str:
+            try:
+                booking_date = datetime.strptime(date_str, '%Y-%m-%d')
+                today = datetime.today()
+
+                if booking_date.date() > today.date():
+                    error_date = "A data da doação deve ser no passado."
+                else:
+                    c.execute("SELECT id FROM clinicas WHERE nome=?", (clinica,))
+                    clinica_id = c.fetchone()
+
+                    if clinica_id:
+                        clinica_id = clinica_id[0]
+
+                        c.execute("SELECT id FROM users WHERE email=?", (email,))
+                        user_id = c.fetchone()[0]
+
+                        c.execute("INSERT INTO agendamentos (users_id, clinicas_id, date, observacao) VALUES (?, ?, ?, ?)", 
+                                  (user_id, clinica_id, date_str, observation))
+                        con.commit()
+
+                        success_message = "Doação adicionada com sucesso!"
+                    else:
+                        error_clinica = "Clínica selecionada não existe!"
+            except ValueError:
+                error_date = "Formato de data inválido. Use o formato AAAA-MM-DD."
+
+    con.close()
+    return render_template('add_donation.html', clinicas=clinicas, success_message=success_message, error_date=error_date)
+
+@app.route('/edit_donation/<int:donation_id>', methods=['GET', 'POST'])
+def edit_donation(donation_id):
+    con = sqlite3.connect('users.db')
+    c = con.cursor()
+
+    c.execute("SELECT nome FROM clinicas")
+    clinicas = c.fetchall()
+
+    c.execute("SELECT clinicas.nome, agendamentos.date, agendamentos.observacao FROM agendamentos JOIN clinicas ON agendamentos.clinicas_id = clinicas.id WHERE agendamentos.rowid = ?", (donation_id,))
+    donation = c.fetchone()
+
+    if request.method == 'POST':
+        clinica = request.form.get('clinica')
+        date_str = request.form.get('data')
+        observation = request.form.get('observacao')
+
+        c.execute("SELECT id FROM clinicas WHERE nome=?", (clinica,))
+        clinica_id = c.fetchone()[0]
+
+        c.execute("UPDATE agendamentos SET clinicas_id = ?, date = ?, observacao = ? WHERE rowid = ?", 
+                  (clinica_id, date_str, observation, donation_id))
+        con.commit()
+        con.close()
+
+        return redirect(url_for('historic'))
+
+    con.close()
+    return render_template('edit_donation.html', donation=donation, clinicas=clinicas)
+
+@app.route('/delete_donation/<int:donation_id>')
+def delete_donation(donation_id):
+    con = sqlite3.connect('users.db')
+    c = con.cursor()
+
+    c.execute("DELETE FROM agendamentos WHERE rowid = ?", (donation_id,))
+    con.commit()
+    con.close()
+
+    return redirect(url_for('historic'))
+
 
 @app.route('/logout')
 def logout():

@@ -41,7 +41,8 @@
         input[type="full_name"],
         input[type="email"],
         input[type="password"],
-        input[type="dob"] {
+        input[type="dob"],
+        input[type="text"] {
             width: 100%;
             padding: 10px;
             margin-top: 5px;
@@ -59,7 +60,7 @@
         #edit-btn, #logout-btn, #book-btn{
             width: 100%;
             padding: 10px;
-            margin-top: 15px;
+            margin-top: 30px;
             border: none;
             border-radius: 5px;
             color: white;
@@ -89,7 +90,7 @@
         #save-btn {
             width: 100%;
             padding: 10px;
-            margin-top: 15px;
+            margin-top: 30px;
             background-color: #28a745;
             border: none;
             border-radius: 5px;
@@ -175,6 +176,8 @@
 
             document.getElementById('save-btn').style.display = 'block';
             document.getElementById('edit-btn').style.display = 'none';
+
+            document.getElementById('password').type = 'text';
         }
     </script>
 

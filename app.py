@@ -47,6 +47,7 @@ def register():
         password = request.form['password']
         email = request.form['email']
         dob = request.form['dob']
+        conf_password = request.form['conf_password']
 
         dob_day = int(dob[:2])
         dob_month = int(dob[3:5])
@@ -62,16 +63,25 @@ def register():
         else:
             valid_dob = False
 
+        if password == conf_password:
+            valid_password = True
+        else:
+            valid_password = False
+
         if full_name and password and email and dob:
             if valid_dob == True:
-                c.execute("SELECT * FROM users WHERE full_name=? AND email=? AND password=? AND dob=?", (full_name, email, password, dob))
-                if c.fetchone() is not None:
-                    error_user = "Usuário já existe!"
+                if valid_password == True:
+                    c.execute("SELECT * FROM users WHERE full_name=? AND email=? AND password=? AND dob=?", (full_name, email, password, dob))
+                    if c.fetchone() is not None:
+                        error_user = "Usuário já existe!"
+                    else:
+                        c.execute("INSERT INTO users VALUES (?,?,?,?,?)", (None, full_name, password, email, dob))
+                        con.commit()
+                        success_message = "Cadastro realizado com sucesso!"
+                        return render_template('register.html', success_message=success_message)
                 else:
-                    c.execute("INSERT INTO users VALUES (?,?,?,?,?)", (None, full_name, password, email, dob))
-                    con.commit()
-                    success_message = "Cadastro realizado com sucesso!"
-                    return render_template('register.html', success_message=success_message)
+                    error_password = "Senhas precisam ser iguais!"
+                    return render_template('register.html', error_password=error_password)
             else:
                 error_dob = "Data de nascimento inválida!"
                 return render_template('register.html', error_dob=error_dob)

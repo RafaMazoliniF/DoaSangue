@@ -25,6 +25,7 @@
             max-width: 400px;
             width: 100%;
             position: relative;
+            text-align: center;
         }
 
         h2 {
@@ -64,6 +65,7 @@
             color: green;
             text-align: center;
             margin-bottom: 20px;
+            margin-top: 10px;
         }
 
         .error-message {
@@ -89,6 +91,22 @@
         .back-button:hover {
             color: #2c2c2c;
         }
+
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+
+        .icon {
+            font-size: 50px;
+            color: red;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -96,27 +114,25 @@
         <a href="{{ url_for('profile', full_name=session['full_name']) }}" class="back-button">
             <i class="fas fa-arrow-left"></i>
         </a>
+        <i style="margin-top: 30px" class="fas fa-plus icon"></i>
         <h2>Adicionar Doação</h2>
 
-        {% if success_message %}
-            <p class="success-message">{{ success_message }}</p>
-        {% endif %}
-
         <form method="POST" action="">
-            <label for="clinica">Selecione a Clínica:</label>
+            <label for="clinica" style="margin-top: 30px; text-align: left">Selecione a Clínica</label>
             <select id="clinica" name="clinica" required>
+                <option value="" disabled selected>Selecione a Clínica</option> 
                 {% for clinica in clinicas %}
                     <option value="{{ clinica[0] }}">{{ clinica[0] }}</option>
                 {% endfor %}
             </select>
 
-            <label for="data">Data da Doação:</label>
+            <label for="data" style="margin-top: 10px; text-align: left">Data da Doação</label>
             <input type="date" id="data" name="data" required>
+            
+            <label for="observacao" style="display: block; text-align: left; margin-top: 10px;">Observação</label>
+            <textarea id="observacao" name="observacao" rows="4" placeholder="Adicione uma observação (opcional)"></textarea>
 
-            <label for="observacao">Observação:</label>
-            <input type="text" id="observacao" name="observacao">
-
-            <button type="submit">Adicionar Doação</button>
+            <button type="submit" style="margin-bottom: 5px";>Adicionar Doação</button>
             {% if success_message %}
                 <div class="success">{{ success_message }}</div>
                 <script>

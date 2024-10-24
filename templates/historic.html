@@ -22,7 +22,7 @@
             padding: 30px;
             border-radius: 10px;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-            max-width: 400px;
+            max-width: 600px;
             width: 100%;
             text-align: center;
             position: relative;
@@ -57,21 +57,6 @@
             background-color: #fafafa;
         }
 
-        .delete-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 0;
-            color: red;
-            font-size: 18px;
-            display: block;
-            margin: 0 auto; 
-        }
-
-        .delete-btn:hover {
-            color: darkred;
-        }
-
         .no-history {
             text-align: center;
             color: #777;
@@ -79,21 +64,33 @@
             margin-top: 20px;
         }
 
-        .back-button {
+        .back-button, .add-button {
             position: absolute;
             top: 20px;
-            left: 20px;
             text-decoration: none;
-            color: #555;
             font-size: 18px;
             display: inline-block;
         }
 
-        .back-button i {
+        .back-button {
+            left: 20px;
+            color: #555;
+        }
+
+        .add-button {
+            right: 20px;
+            color: #2c2c2c;
+        }
+
+        .back-button i, .add-button i {
             margin-right: 5px;
         }
 
         .back-button:hover {
+            color: #2c2c2c;
+        }
+
+        .add-button:hover {
             color: #2c2c2c;
         }
 
@@ -102,42 +99,74 @@
             color: red;
             margin-bottom: 10px;
         }
+
+        .edit-btn {
+            color: blue; /* cor padrão dos ícones */
+            margin-right: 10px; /* espaço entre os ícones */
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .delete-btn {
+            color: red; /* cor padrão dos ícones */
+            margin-right: 10px; /* espaço entre os ícones */
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .edit-btn:hover {
+            color: darkblue; /* cor ao passar o mouse sobre o ícone de editar */
+        }
+
+        .delete-btn:hover {
+            color: darkred; /* cor ao passar o mouse sobre o ícone de excluir */
+        }
+
     </style>
 </head>
 <body>
     <div class="history-container">
         <a href="{{ url_for('profile', full_name=session['full_name']) }}" class="back-button">
-            <i class="fas fa-arrow-left"></i>
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+
+        <a href="{{ url_for('add_donation', donation_id=donation_id) }}" class="add-button">
+            <i class="fas fa-plus"></i>
         </a>
         
         <i class="fas fa-history icon"></i>
         <h2>Histórico de Doações</h2>
-        <a href="{{ url_for('add_donation', donation_id=donation_id) }}">Registrar Doação</a>
+        
         {% if history %}
             <table>
                 <thead>
                     <tr>
                         <th>Clínica</th>
                         <th>Data do agendamento</th>
+                        <th>Observações</th>
                         <th>Ação</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for clinic, date, donation_id in history %}
+                    {% for clinic, date, observacao, donation_id in history %}
                     <tr>
                         <td>{{ clinic }}</td>
                         <td>{{ date }}</td>
+                        <td>{{ observacao }}</td>
                         <td>
-                            <a href="{{ url_for('edit_donation', donation_id=donation_id) }}">Editar</a>
-                            <a href="{{ url_for('delete_donation', donation_id=donation_id) }}" style="color:red;">Excluir</a>
+                            <a href="{{ url_for('edit_donation', donation_id=donation_id) }}" class="edit-btn" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{{ url_for('delete_donation', donation_id=donation_id) }}" class="delete-btn" title="Excluir">
+                                <i class="fas fa-trash"></i>
+                            </a>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
-                
             </table>
         {% else %}
-            <p class="no-history">Nenhuma doação encontrado</p>
+            <p class="no-history">Nenhuma doação encontrada</p>
         {% endif %}
     </div>
 </body>

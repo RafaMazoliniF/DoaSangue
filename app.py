@@ -201,16 +201,25 @@ def historic():
     c = con.cursor()
 
     email = session.get('email')
+    history = []
 
     c.execute("SELECT id FROM users WHERE email=?", (email,))
-    user_id = c.fetchone()[0]
+    user_id = c.fetchone()
 
-    c.execute("SELECT clinicas.nome, agendamentos.date, agendamentos.rowid FROM agendamentos JOIN clinicas ON agendamentos.clinicas_id = clinicas.id WHERE agendamentos.users_id = ?", (user_id,))
-    history = [(nome, datetime.strptime(date, '%Y-%m-%d').strftime('%d/%m/%Y'), rowid) for nome, date, rowid in c.fetchall()]
+    if user_id:
+        user_id = user_id[0]
+        
+        c.execute("SELECT clinicas.nome, agendamentos.date, agendamentos.observacao, agendamentos.rowid FROM agendamentos JOIN clinicas ON agendamentos.clinicas_id = clinicas.id WHERE agendamentos.users_id = ?", (user_id,))
+        history = [(nome, datetime.strptime(date, '%Y-%m-%d').strftime('%d/%m/%Y'), observacao, rowid) for nome, date, observacao, rowid in c.fetchall()]
 
     con.close()
+    
+    if not history:
+        message_none_clinicas = "Seu histórico está vazio!"
+    else:
+        message_none_clinicas = None
 
-    return render_template('historic.html', history=history)
+    return render_template('historic.html', history=history, message_none_clinicas=message_none_clinicas)
 
 @app.route('/add_donation', methods=['GET', 'POST'])
 def add_donation():

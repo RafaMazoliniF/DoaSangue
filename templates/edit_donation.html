@@ -89,6 +89,24 @@
         .back-button:hover {
             color: #2c2c2c;
         }
+
+        .icon {
+            font-size: 50px;
+            color: red;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+            
     </style>
 </head>
 <body>
@@ -96,6 +114,9 @@
         <a href="{{ url_for('profile', full_name=session['full_name']) }}" class="back-button">
             <i class="fas fa-arrow-left"></i>
         </a>
+        <div style="text-align: center;">
+            <i class="fas fa-edit icon"></i>
+        </div>
         <h2>Editar Doação</h2>
 
         {% if success_message %}
@@ -103,18 +124,18 @@
         {% endif %}
 
         <form method="POST">
-            <label for="clinica">Selecione a Clínica:</label>
+            <label for="clinica">Selecione a Clínica</label>
             <select id="clinica" name="clinica" required>
                 {% for clinica in clinicas %}
                     <option value="{{ clinica[0] }}" {% if clinica[0] == selected_clinica %}selected{% endif %}>{{ clinica[0] }}</option>
                 {% endfor %}
             </select>
 
-            <label for="data">Data da Doação:</label>
+            <label for="data">Data da Doação</label>
             <input type="date" id="data" name="data" value="{{ selected_data }}" required>
 
-            <label for="observacao">Observação:</label>
-            <input type="text" id="observacao" name="observacao" value="{{ selected_observacao }}">
+            <label for="observacao" style="display: block; text-align: left; margin-top: 10px;">Observação</label>
+            <textarea id="observacao" name="observacao" rows="4" placeholder="Adicione uma observação (opcional)"></textarea>
 
             <button type="submit">Salvar Alterações</button>
         </form>

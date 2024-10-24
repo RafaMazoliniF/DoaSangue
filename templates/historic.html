@@ -31,6 +31,7 @@
         h2 {
             color: #333;
             text-align: center;
+            margin-bottom: 40px;
         }
 
         table {
@@ -55,6 +56,10 @@
 
         td {
             background-color: #fafafa;
+        }
+
+        td:last-child {
+            text-align: center;
         }
 
         .no-history {
@@ -127,7 +132,7 @@
 <body>
     <div class="history-container">
         <a href="{{ url_for('profile', full_name=session['full_name']) }}" class="back-button">
-            <i class="fas fa-arrow-left"></i> Voltar
+            <i class="fas fa-arrow-left"></i>
         </a>
 
         <a href="{{ url_for('add_donation', donation_id=donation_id) }}" class="add-button">

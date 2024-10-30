@@ -71,7 +71,7 @@ def register():
         if full_name and password and email and dob:
             if valid_dob == True:
                 if valid_password == True:
-                    c.execute("SELECT * FROM users WHERE full_name=? AND email=? AND password=? AND dob=?", (full_name, email, password, dob))
+                    c.execute("SELECT * FROM users WHERE email=? ", (email, ))
                     if c.fetchone() is not None:
                         error_user = "Usuário já existe!"
                     else:

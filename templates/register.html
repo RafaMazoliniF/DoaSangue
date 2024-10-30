@@ -38,12 +38,12 @@
             margin-bottom: 10px;
         }
 
-        .password-container {
+        .password-container, .conf_password-container {
             position: relative;
             width: 100%;
         }
 
-        .password-container input[type="password"] {
+        .password-container input[type="password"], .conf_password-container input[type="conf_password"] {
             width: 100%;
             padding: 10px;
             margin-bottom: 10px;
@@ -53,7 +53,7 @@
             box-sizing: border-box;
         }
 
-        .password-container i {
+        .password-container i, .conf_password-container i{
             position: absolute;
             right: 10px;
             top: 40%; 
@@ -135,21 +135,27 @@
         <form method="POST">
             <label for="full_name">Nome completo</label>
             <input type="text" id="full_name" name="full_name" value="{{ full_name }}" required>
-            {% if error_user %}
-                <div class="error">{{ error_user }}</div>  
-            {% endif %}
 
             <label for="password">Senha</label>
             <div class="password-container">
                 <input type="password" id="password" name="password" required>
                 <i class="fas fa-eye" id="togglePassword"></i>
             </div>
+
+            <label for="conf_password">Confirme sua senha</label>
+            <div class="password-container">
+                <input type="password" id="conf_password" name="conf_password" required>
+                <i class="fas fa-eye" id="toggleConfPassword"></i>
+            </div>
             {% if error_password %}
-                <div class="error">{{ error_password }}</div>  
+                <div style="margin-top: 12px;" class="error">{{ error_password }}</div>  
             {% endif %}
 
             <label for="email">Email</label>
             <input type="email" id="email" name="email" value="{{ email }}" required>
+            {% if error_user %}
+                <div style="margin-bottom: 20px" class="error">{{ error_user }}</div>  
+            {% endif %}
 
             <label for="dob">Data de nascimento (DD/MM/YYYY)</label>
             <input type="text" id="dob" name="dob" value="{{ dob }}" required oninput="formatDate(this)">
@@ -178,9 +184,18 @@
         togglePassword.addEventListener('click', function (e) {
             const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
             password.setAttribute('type', type);
-
             this.classList.toggle('fa-eye-slash');
         });
+
+        const toggleConfPassword = document.querySelector('#toggleConfPassword');
+        const confPassword = document.querySelector('#conf_password');
+
+        toggleConfPassword.addEventListener('click', function (e) {
+            const type = confPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+            confPassword.setAttribute('type', type);
+            this.classList.toggle('fa-eye-slash');
+        });
+
 
         function formatDate(input) {
             let value = input.value.replace(/\D/g, '');

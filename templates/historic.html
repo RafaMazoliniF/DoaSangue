@@ -126,10 +126,37 @@
         .delete-btn:hover {
             color: darkred; /* cor ao passar o mouse sobre o ícone de excluir */
         }
+        
+        .profile-container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+        }
 
+        .profile-image-container {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+        }
+
+        .profile-image {
+            width: 230px;
+            height: 330px;
+            border-radius: 1px;
+        }
     </style>
 </head>
 <body>
+    <div class="profile-image-container">
+        <a href="https://www.gov.br/saude/pt-br/composicao/saes/sangue" target="_blank">
+            <img src="{{ url_for('static', filename='medic.png') }}" class="profile-image">
+        </a>
+    </div>
     <div class="history-container">
         <a href="{{ url_for('profile', full_name=session['full_name']) }}" class="back-button">
             <i class="fas fa-arrow-left"></i>

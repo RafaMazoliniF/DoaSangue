@@ -35,8 +35,8 @@
         }
 
         .profile-image {
-            width: 200px;
-            height: 300px;
+            width: 230px;
+            height: 330px;
             border-radius: 1px;
         }
 
@@ -72,7 +72,7 @@
             color: #888;
         }
 
-        #edit-btn, #logout-btn, #book-btn {
+        #edit-btn, #logout-btn, #book-btn{
             width: 100%;
             padding: 10px;
             margin-top: 30px;
@@ -83,7 +83,7 @@
             cursor: pointer;
         }
 
-        #hist-btn {
+        #hist-btn, #prox_clinicas-btn{
             width: 100%;
             padding: 10px;
             margin-top: 15px;
@@ -94,13 +94,9 @@
             cursor: pointer;
         }
 
-        #edit-btn {
-            background-color: #007bff;
-        }
+        #edit-btn { background-color: #007bff;}
 
-        #edit-btn:hover {
-            background-color: #0056b3;
-        }
+        #edit-btn:hover { background-color: #0056b3;}
 
         #save-btn {
             width: 100%;
@@ -115,56 +111,60 @@
             display: none;
         }
 
-        #save-btn:hover {
-            background-color: #218838;
-        }
+        #save-btn:hover { background-color: #218838;}
 
         #logout-btn {
             background-color: #dc3545;
             margin-top: 15px;
         }
 
-        #logout-btn:hover {
-            background-color: #c82333;
-        }
+        #logout-btn:hover { background-color: #c82333; }
 
         #book-btn {
             background-color: #28a745; 
             margin-top: 15px;
         }
 
-        #book-btn:hover {
-            background-color: #218838;
-        }
+        #book-btn:hover { background-color: #218838; }
 
         #hist-btn {
             background-color: #f1ee2f; 
             margin-top: 15px;
         }
 
-        #hist-btn:hover {
-            background-color: #c5c329;
+        #hist-btn:hover { background-color: #c5c329; }
+
+        #prox_clinicas-btn {
+            background-color: orange; 
+            margin-top: 15px;
         }
+
+        #prox_clinicas-btn:hover { background-color: darkorange; }
 
         .icon {
             font-size: 50px;
             color: red;
             margin-bottom: 10px;
         }
+
+        #confirm-password { display: none; }
+
+        .error {
+            color: red;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
     <div class="profile-image-container">
         <a href="https://www.gov.br/saude/pt-br/composicao/saes/sangue" target="_blank">
-            <img src="{{ url_for('static', filename='criterious.png') }}" class="profile-image">
+            <img src="{{ url_for('static', filename='medic.png') }}" class="profile-image">
         </a>
     </div>
-    <div class="profile-container">
-        
 
+    <div class="profile-container">
         <i class="fas fa-house icon"></i>
         <h2>Olá, {{ full_name }}!</h2>
-
         <form method="POST">
             <label for="full_name">Nome</label>
             <input type="full_name" id="full_name" name="full_name" value="{{ full_name }}" readonly>
@@ -175,11 +175,24 @@
             <label for="password">Senha</label>
             <input type="password" id="password" name="password" value="{{ password }}" readonly>
 
+            <div id="confirm-password">
+                <label for="confirm_password">Confirmar Senha</label>
+                <input type="password" id="confirm_password" name="confirm_password" value="{{ password }}">
+            </div>
+
+            {% if error_password %}
+                <div style="margin-top: 12px;" class="error">{{ error_password }}</div>
+                <script>
+                    setTimeout(function() {
+                        window.location.href = "{{ url_for('profile') }}";
+                    }, 2000);  
+                </script>  
+            {% endif %}
+
             <label for="dob">Data de Nascimento (DD/MM/AAAA)</label>
             <input type="dob" id="dob" name="dob" value="{{ dob }}" readonly>
 
             <button type="button" id="edit-btn" onclick="enableEdit()">Atualizar Dados</button>
-
             <input type="submit" id="save-btn" value="Salvar Alterações">
         </form>
 
@@ -191,9 +204,15 @@
             <button type="submit" id="hist-btn">Histórico de doações</button>
         </form>
 
+        <form action="{{ url_for('clinicas_proximas') }}" method="GET">
+            <button type="submit" id="prox_clinicas-btn">Clínicas próximas</button>
+        </form>
+
         <form action="{{ url_for('logout') }}" method="GET">
             <button type="submit" id="logout-btn">Logout</button>
         </form>
+
+        <button type="button" id="edit-btn" onclick="send_email()">Enviar Email</button>
     </div>
 
     <script>
@@ -204,10 +223,36 @@
 
             document.getElementById('save-btn').style.display = 'block';
             document.getElementById('edit-btn').style.display = 'none';
-
             document.getElementById('password').type = 'text';
+
+            document.getElementById('confirm-password').style.display = 'block';
+            document.getElementById('confirm_password').value = document.getElementById('password').value;
+            document.getElementById('confirm_password').type = 'text';
+        }
+
+        function send_email() {
+            const email = document.getElementById('email').value;
+
+            fetch('/send_email', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email: email })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert(data.message);
+                } else if (data.error) {
+                    alert(`Erro: ${data.error}`);
+                }
+            })
+            .catch(error => {
+                alert(`Erro ao enviar o e-mail: ${error}`);
+            });
         }
     </script>
-
 </body>
 </html>
+

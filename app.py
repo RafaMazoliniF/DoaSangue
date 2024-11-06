@@ -1,15 +1,51 @@
-from flask import Flask, render_template, request, redirect, url_for, session
-import sqlite3
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+import sqlite3, requests, re, smtplib
 from datetime import datetime
+from geopy.geocoders import Nominatim
 
 app = Flask(__name__)
 app.secret_key = "senhasecreta"
 
+def get_cep(endereco):
+    url = f"https://nominatim.openstreetmap.org/search?format=json&q={endereco}"
+    resp = requests.get(url)
+    
+    if resp.status_code == 200:
+        data = resp.json()
+        if data:
+            lat, lon = data[0]['lat'], data[0]['lon']
+            via_cep_url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}"
+            via_cep_response = requests.get(via_cep_url)
+            
+            if via_cep_response.status_code == 200:
+                via_cep_data = via_cep_response.json()
+                return via_cep_data['address'].get('postcode')
+            
+    return None
+
+def send_email():
+    data = request.get_json()
+    receiver = data.get("email")
+    
+    if not receiver:
+        return jsonify({"error": "Email destinatário é necessário"}), 400
+    
+    s = smtplib.SMTP('smtp.gmail.com', 587)
+    s.starttls()
+    try:
+        s.login("seu_email@gmail.com", "sua_senha")
+        message = f"Hello, {receiver}. Você está apto a doar!"
+        s.sendmail("seu_email@gmail.com", receiver, message)
+        s.quit()
+        return jsonify({"message": "Email enviado com sucesso"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 def init_db():
     con = sqlite3.connect('users.db')
     c = con.cursor()
-    c.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT, password TEXT, email TEXT, dob TEXT)")
-    c.execute("CREATE TABLE IF NOT EXISTS clinicas (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL UNIQUE, telefone TEXT, endereco TEXT, horario TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT, password TEXT, email TEXT, dob TEXT, sexo TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS clinicas (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL UNIQUE, telefone TEXT, endereco TEXT, horario TEXT, cep TEXT NOT NULL)")
     c.execute("CREATE TABLE IF NOT EXISTS agendamentos (users_id INTEGER, clinicas_id INTEGER, date TEXT, observacao TEXT, FOREIGN KEY (clinicas_id) REFERENCES clinicas(id) ON DELETE SET NULL, FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE SET NULL)")
     c.execute("INSERT OR REPLACE INTO sqlite_sequence (name, seq) VALUES ('clinicas', 0)")
     con.commit()
@@ -17,16 +53,32 @@ def init_db():
 
 def add_clinicas():
     clinicas = [
-        ("Posto Unicamp - Hemocentro", "0800-722-8432", "Rua Carlos Chagas, 480, Cidade Universitária, “Zeferino Vaz”", "Seg a Sáb (Inclusive em feriados): 7:30h - 15:00h"),
-        ("Posto Mário Gatti - Hospital Municipal Dr. Mário Gatti", "(19) 3272-5501", "Av. Prefeito Faria Lima, 340 Pq. Itália", "Seg a Sáb (inclusive em feriados): 7:30h - 15:00h")
+        ("Posto Unicamp - Hemocentro", "0800-722-8432", "Rua Carlos Chagas, 480 - Cidade Universitária", "Seg a Sáb (Inclusive em feriados): 7:30h - 15:00h", ""),
+        ("Posto Mário Gatti - Hospital Municipal Dr. Mário Gatti", "(19) 3272-5501", "Av. Prefeito Faria Lima, 340 - Pq. Itália", "Seg a Sáb (inclusive em feriados): 7:30h - 15:00h", ""),
+        ("Centro de Hemoterapia Celular em Medicina de Campinas", "(19) 3734-3193", "Rua Onze de Agosto, 415 - Centro", "Seg a Sex: 7:30h - 12:30h / Sáb: 8:00h - 12:00h", ""),
+        ("Hemocamp Clínica de Hemoterapia", "(19) 3235-2259", "Rua Irmã Serafina, 259 - Centro", "Seg a Sex: 8:00h as 11:00h", ""),
+        ("Posto de Coleta Boldrini", "(19) 3887-5028", "Av. Dr. Gabriel Porto, 1270 - Cidade Universitária", "Seg a Sex: 8:00h as 12:00h", "")
     ]
 
     con = sqlite3.connect('users.db')
     c = con.cursor()
-    c.executemany("INSERT OR IGNORE INTO clinicas (nome, telefone, endereco, horario) VALUES (?, ?, ?, ?)", clinicas)
+    c.executemany("INSERT OR IGNORE INTO clinicas (nome, telefone, endereco, horario, cep) VALUES (?, ?, ?, ?, ?)", clinicas)
+
+    c.execute("SELECT endereco FROM clinicas")
+    endereco = c.fetchall()
+    
+    for end in endereco:
+        end_format = re.match(r'^(.*?)(,)', end[0])
+        end_final = end_format.group(1).strip() + " - Campinas"
+
+        cep = get_cep(end_final)
+
+        if cep:  
+            c.execute("UPDATE clinicas SET cep=? WHERE endereco=?", (cep, end[0]))
+    
     con.commit()
     con.close()
-
+    
 @app.route('/')
 def home():
     return render_template('home.html')
@@ -99,8 +151,14 @@ def login():
         email = request.form['email']
         password = request.form['password']
 
-        c.execute("SELECT * FROM users WHERE email=? AND password=?", (email, password))
+        c.execute("SELECT * FROM users WHERE email=?", (email,))
         user = c.fetchone()
+
+        if user is None:
+            error_login = "Usuário não encontrado. Por favor, verifique seu e-mail."
+        else:
+            c.execute("SELECT * FROM users WHERE email=? AND password=?", (email, password))
+            user = c.fetchone()
 
         if user is None:
             error_login = "Email ou senha incorretos"
@@ -110,9 +168,9 @@ def login():
             session['user_id'] = user[0]  
             con.close()
             return redirect(url_for('profile', user_id=user[0]))  
+        
     con.close()
     return render_template('login.html', error_login=error_login)
-
 
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
@@ -136,12 +194,22 @@ def profile():
         att_full_name = request.form['full_name']
         password = request.form['password']
         dob = request.form['dob']
+        conf_password = request.form['confirm_password']
 
-        if att_full_name != user_data[1] or password != user_data[2] or dob != user_data[3]:
-            c.execute("UPDATE users SET full_name=?, password=?, dob=? WHERE id=?", (att_full_name, password, dob, user_id))
-            con.commit()
-            success_message = "Dados atualizados com sucesso!"
-            user_data = (user_id, att_full_name, password, user_data[3], dob)
+        if password == conf_password:
+            valid_password = True
+        else:
+            valid_password= False
+
+        if att_full_name!= user_data[1] or password!= user_data[2] or dob!= user_data[3]:
+            if valid_password:
+                c.execute("UPDATE users SET full_name=?, password=?, dob=? WHERE id=?", (att_full_name, password, dob, user_id))
+                con.commit()
+                success_message = "Dados atualizados com sucesso!"
+                user_data = (user_id, att_full_name, password, user_data[3], dob)
+            else:
+                error_password = "Senhas precisam ser iguais!"
+                return render_template('profile.html', error_password=error_password, full_name=att_full_name, email=user_data[3], dob=dob, password=password)
         else:
             success_message = "Nenhuma alteração detectada."
 
@@ -319,6 +387,31 @@ def delete_donation(donation_id):
 
     return redirect(url_for('historic'))
 
+@app.route('/clinicias_proximas')
+def clinicas_proximas():
+    con = sqlite3.connect('users.db')
+    c = con.cursor()
+
+    c.execute("SELECT cep FROM clinicas")
+    cep_result = c.fetchall()
+
+    lista_cep = [cep[0] for cep in cep_result]
+
+    con.commit()
+    con.close()
+
+    return render_template('clinicas_proximas.html', lista_cep=lista_cep)
+
+@app.route('/get_clinics', methods=['GET'])
+def get_clinics():
+    con = sqlite3.connect('users.db')
+    cursor = con.cursor()
+    cursor.execute("SELECT nome, endereco, cep FROM clinicas")
+    clinics = cursor.fetchall()
+    con.close()
+
+    clinics_list = [{'nome': nome, 'endereco': endereco, 'cep': cep} for nome, endereco, cep in clinics]
+    return jsonify(clinics_list)
 
 @app.route('/logout')
 def logout():

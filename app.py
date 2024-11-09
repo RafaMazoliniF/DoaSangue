@@ -1,7 +1,12 @@
+import threading
+import time
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import sqlite3, requests, re, smtplib
+import time
 from datetime import datetime
 from geopy.geocoders import Nominatim
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 app = Flask(__name__)
 app.secret_key = "senhasecreta"
@@ -23,20 +28,66 @@ def get_cep(endereco):
             
     return None
 
+@app.route('/send_email', methods=['POST'])
 def send_email():
+    smtp_server = "smtp.gmail.com"
+    port = 587  
+    sender = "solidaria.gota@gmail.com"
+    password = "hybd wqnw piyj ptzr"
+
     data = request.get_json()
     receiver = data.get("email")
-    
+    full_name = data.get("full_name")   
+
+    date = get_date()
+
     if not receiver:
         return jsonify({"error": "Email destinatário é necessário"}), 400
     
-    s = smtplib.SMTP('smtp.gmail.com', 587)
-    s.starttls()
+    message = MIMEMultipart()
+    message["Subject"] = "A ESPERA ACABOU!! 🎉"
+    message["From"] = sender
+    message["To"] = receiver
+
+    html = f""" 
+    <html>
+        <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; color: #333; margin: 0; padding: 20px;">
+            <table align="center" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #ddd;">
+                <tr>
+                    <td style="padding: 20px; text-align: center; background-color: #ff0000; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                        <h1 style="margin: 0; font-size: 28px;">Gota Solidária</h1>
+                        <p style="margin: 5px 0; font-size: 18px;">Sua ajuda é essencial, e estamos felizes em contar com você!</p>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td style="padding: 20px;">
+                        <p style="font-size: 18px;">Olá <strong>{full_name}</strong>,</p>
+                        <p style="font-size: 18px;">Os 3 meses mínimos de intervalo já acabaram, e você está apto para doar novamente!</p>
+                        
+                        <p style="text-align: center; margin: 30px 0;">
+                            <a href="http://127.0.0.1:5000/booking" style="display: inline-block; padding: 12px 30px; background-color: #28a745; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 18px;">Agende sua consulta agora</a>
+                        </p>
+                        
+                        <p style="font-size: 18px;">Estamos ansiosos para vê-lo novamente e agradecemos seu compromisso em salvar vidas.</p>
+                        
+                        <p style="font-size: 16px; color: #555; text-align: center; margin-top: 20px;">
+                            Atenciosamente,<br>Equipe Gota Solidária
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </body>
+    </html>
+    """
+
+    message.attach(MIMEText(html, "html"))
+    
     try:
-        s.login("seu_email@gmail.com", "sua_senha")
-        message = f"Hello, {receiver}. Você está apto a doar!"
-        s.sendmail("seu_email@gmail.com", receiver, message)
-        s.quit()
+        with smtplib.SMTP(smtp_server, port) as s:
+            s.starttls()
+            s.login(sender, password)
+            s.sendmail(sender, receiver, message.as_string())
         return jsonify({"message": "Email enviado com sucesso"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -44,7 +95,7 @@ def send_email():
 def init_db():
     con = sqlite3.connect('users.db')
     c = con.cursor()
-    c.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT, password TEXT, email TEXT, dob TEXT, sexo TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT, password TEXT, email TEXT, dob TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS clinicas (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL UNIQUE, telefone TEXT, endereco TEXT, horario TEXT, cep TEXT NOT NULL)")
     c.execute("CREATE TABLE IF NOT EXISTS agendamentos (users_id INTEGER, clinicas_id INTEGER, date TEXT, observacao TEXT, FOREIGN KEY (clinicas_id) REFERENCES clinicas(id) ON DELETE SET NULL, FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE SET NULL)")
     c.execute("INSERT OR REPLACE INTO sqlite_sequence (name, seq) VALUES ('clinicas', 0)")
@@ -153,12 +204,6 @@ def login():
 
         c.execute("SELECT * FROM users WHERE email=?", (email,))
         user = c.fetchone()
-
-        if user is None:
-            error_login = "Usuário não encontrado. Por favor, verifique seu e-mail."
-        else:
-            c.execute("SELECT * FROM users WHERE email=? AND password=?", (email, password))
-            user = c.fetchone()
 
         if user is None:
             error_login = "Email ou senha incorretos"
@@ -421,5 +466,6 @@ def logout():
 if __name__ == '__main__':
     init_db()
     add_clinicas()
+    timer()
     app.run(debug=True)
 

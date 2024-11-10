@@ -39,8 +39,6 @@ def send_email():
     receiver = data.get("email")
     full_name = data.get("full_name")   
 
-    date = get_date()
-
     if not receiver:
         return jsonify({"error": "Email destinatário é necessário"}), 400
     
@@ -51,25 +49,25 @@ def send_email():
 
     html = f""" 
     <html>
-        <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; color: #333; margin: 0; padding: 20px;">
-            <table align="center" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #ddd;">
+        <body style="font-family: Arial, sans-serif; background-color: #ffffff; color: #333; margin: 0; padding: 20px;">
+            <table align="center" style="max-width: 600px; background-color: #f7f7f7; border-radius: 8px; padding: 20px; border: 1px solid #ddd;">
                 <tr>
                     <td style="padding: 20px; text-align: center; background-color: #ff0000; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-                        <h1 style="margin: 0; font-size: 28px;">Gota Solidária</h1>
-                        <p style="margin: 5px 0; font-size: 18px;">Sua ajuda é essencial, e estamos felizes em contar com você!</p>
+                        <h1 style="margin: 0; font-size: 28px; text-shadow: 1px 1px 2px #333;">Gota Solidária</h1>
+                        <p style="margin: 5px 0; font-size: 18px; text-shadow: 0.5px 0.5px 1px #555;">Sua ajuda é essencial, e estamos felizes em contar com você!</p>
                     </td>
                 </tr>
                 
                 <tr>
                     <td style="padding: 20px;">
-                        <p style="font-size: 18px;">Olá <strong>{full_name}</strong>,</p>
+                        <p style="font-size: 18px;">Olá <strong style="color: #ff0000;">{full_name}</strong>,</p>
                         <p style="font-size: 18px;">Os 3 meses mínimos de intervalo já acabaram, e você está apto para doar novamente!</p>
                         
                         <p style="text-align: center; margin: 30px 0;">
-                            <a href="http://127.0.0.1:5000/booking" style="display: inline-block; padding: 12px 30px; background-color: #28a745; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 18px;">Agende sua consulta agora</a>
+                            <a href="http://127.0.0.1:5000/booking" style="display: inline-block; padding: 12px 30px; background-color: #ff0000; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 18px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);">Agende sua consulta agora</a>
                         </p>
                         
-                        <p style="font-size: 18px;">Estamos ansiosos para vê-lo novamente e agradecemos seu compromisso em salvar vidas.</p>
+                        <p style="font-size: 18px; text-shadow: 0.5px 0.5px 1px #aaa;">Estamos ansiosos para vê-lo novamente e agradecemos seu compromisso em salvar vidas.</p>
                         
                         <p style="font-size: 16px; color: #555; text-align: center; margin-top: 20px;">
                             Atenciosamente,<br>Equipe Gota Solidária
@@ -80,7 +78,7 @@ def send_email():
         </body>
     </html>
     """
-
+    
     message.attach(MIMEText(html, "html"))
     
     try:
@@ -466,6 +464,5 @@ def logout():
 if __name__ == '__main__':
     init_db()
     add_clinicas()
-    timer()
     app.run(debug=True)
 

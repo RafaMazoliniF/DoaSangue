@@ -93,7 +93,7 @@ def send_email():
 def init_db():
     con = sqlite3.connect('users.db')
     c = con.cursor()
-    c.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT, password TEXT, email TEXT, dob TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT, password TEXT, email TEXT, dob TEXT, next_donation TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS clinicas (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL UNIQUE, telefone TEXT, endereco TEXT, horario TEXT, cep TEXT NOT NULL)")
     c.execute("CREATE TABLE IF NOT EXISTS agendamentos (users_id INTEGER, clinicas_id INTEGER, date TEXT, observacao TEXT, FOREIGN KEY (clinicas_id) REFERENCES clinicas(id) ON DELETE SET NULL, FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE SET NULL)")
     c.execute("INSERT OR REPLACE INTO sqlite_sequence (name, seq) VALUES ('clinicas', 0)")
@@ -176,7 +176,7 @@ def register():
                     if c.fetchone() is not None:
                         error_user = "Usuário já existe!"
                     else:
-                        c.execute("INSERT INTO users VALUES (?,?,?,?,?)", (None, full_name, password, email, dob))
+                        c.execute("INSERT INTO users VALUES (?,?,?,?,?,NULL)", (None, full_name, password, email, dob))
                         con.commit()
                         success_message = "Cadastro realizado com sucesso!"
                         return render_template('register.html', success_message=success_message)
@@ -295,13 +295,30 @@ def booking():
                         if clinica_id:
                             clinica_id = clinica_id[0]
 
-                            c.execute("SELECT id FROM users WHERE email=?", (email,))
+                            c.execute("SELECT id, next_donation FROM users WHERE email=?", (email,))
                             result = c.fetchone()
                             result_id = result[0]
+                            next_donation_str = result[1]
 
-                            c.execute("INSERT INTO agendamentos (users_id, clinicas_id, date, observacao) VALUES (?, ?, ?, ?)", 
-                                (result_id, clinica_id, date_str, observation))
+                            # Inserir o novo agendamento
+                            c.execute(
+                                "INSERT INTO agendamentos (users_id, clinicas_id, date, observacao) VALUES (?, ?, ?, ?)", 
+                                (result_id, clinica_id, date_str, observation)
+                            )
                             con.commit()
+
+                            # Verificar e atualizar `next_donation`, se necessário
+                            if next_donation_str:
+                                next_donation = datetime.strptime(next_donation_str, '%Y-%m-%d').date()
+                            else:
+                                next_donation = None
+
+                            if not next_donation or booking_date.date() > next_donation:
+                                c.execute(
+                                    "UPDATE users SET next_donation=? WHERE id=?", 
+                                    (date_str, result_id)
+                                )
+                                con.commit()
 
                             success_message = "Agendamento salvo com sucesso!"
                             return render_template('agendamento.html', clinicas=clinicas, success_message=success_message)
@@ -354,6 +371,7 @@ def add_donation():
 
     success_message = None
     error_date = None
+    error_clinica = None
 
     if request.method == 'POST':
         clinica = request.form.get('clinica')
@@ -374,12 +392,30 @@ def add_donation():
                     if clinica_id:
                         clinica_id = clinica_id[0]
 
-                        c.execute("SELECT id FROM users WHERE email=?", (email,))
-                        user_id = c.fetchone()[0]
+                        c.execute("SELECT id, next_donation FROM users WHERE email=?", (email,))
+                        user_result = c.fetchone()
+                        user_id = user_result[0]
+                        next_donation_str = user_result[1]
 
-                        c.execute("INSERT INTO agendamentos (users_id, clinicas_id, date, observacao) VALUES (?, ?, ?, ?)", 
-                                  (user_id, clinica_id, date_str, observation))
+                        # Inserir a doação
+                        c.execute(
+                            "INSERT INTO agendamentos (users_id, clinicas_id, date, observacao) VALUES (?, ?, ?, ?)", 
+                            (user_id, clinica_id, date_str, observation)
+                        )
                         con.commit()
+
+                        # Verificar e atualizar `next_donation`, se necessário
+                        if next_donation_str:
+                            next_donation = datetime.strptime(next_donation_str, '%Y-%m-%d').date()
+                        else:
+                            next_donation = None
+
+                        if not next_donation or booking_date.date() > next_donation:
+                            c.execute(
+                                "UPDATE users SET next_donation=? WHERE id=?", 
+                                (date_str, user_id)
+                            )
+                            con.commit()
 
                         success_message = "Doação adicionada com sucesso!"
                     else:
@@ -388,17 +424,24 @@ def add_donation():
                 error_date = "Formato de data inválido. Use o formato AAAA-MM-DD."
 
     con.close()
-    return render_template('add_donation.html', clinicas=clinicas, success_message=success_message, error_date=error_date)
+    return render_template('add_donation.html', clinicas=clinicas, success_message=success_message, error_date=error_date, error_clinica=error_clinica)
 
 @app.route('/edit_donation/<int:donation_id>', methods=['GET', 'POST'])
 def edit_donation(donation_id):
     con = sqlite3.connect('users.db')
     c = con.cursor()
 
+    # Obter as clínicas disponíveis
     c.execute("SELECT nome FROM clinicas")
     clinicas = c.fetchall()
 
-    c.execute("SELECT clinicas.nome, agendamentos.date, agendamentos.observacao FROM agendamentos JOIN clinicas ON agendamentos.clinicas_id = clinicas.id WHERE agendamentos.rowid = ?", (donation_id,))
+    # Obter os detalhes da doação atual
+    c.execute("""
+        SELECT clinicas.nome, agendamentos.date, agendamentos.observacao 
+        FROM agendamentos 
+        JOIN clinicas ON agendamentos.clinicas_id = clinicas.id 
+        WHERE agendamentos.rowid = ?
+    """, (donation_id,))
     donation = c.fetchone()
 
     if request.method == 'POST':
@@ -406,14 +449,38 @@ def edit_donation(donation_id):
         date_str = request.form.get('data')
         observation = request.form.get('observacao')
 
+        # Buscar o ID da clínica selecionada
         c.execute("SELECT id FROM clinicas WHERE nome=?", (clinica,))
         clinica_id = c.fetchone()[0]
 
-        c.execute("UPDATE agendamentos SET clinicas_id = ?, date = ?, observacao = ? WHERE rowid = ?", 
-                  (clinica_id, date_str, observation, donation_id))
+        # Atualizar os dados da doação
+        c.execute("""
+            UPDATE agendamentos 
+            SET clinicas_id = ?, date = ?, observacao = ? 
+            WHERE rowid = ?
+        """, (clinica_id, date_str, observation, donation_id))
         con.commit()
-        con.close()
 
+        # Verificar todas as datas de doações do usuário para definir a próxima data de doação
+        email = session.get('email')
+        c.execute("SELECT id FROM users WHERE email=?", (email,))
+        user_id = c.fetchone()[0]
+
+        # Obter todas as datas de doação do usuário
+        c.execute("SELECT date FROM agendamentos WHERE users_id = ?", (user_id,))
+        all_donation_dates = [datetime.strptime(row[0], '%Y-%m-%d').date() for row in c.fetchall()]
+
+        # Definir o `next_donation` para a data mais recente, se houver doações
+        if all_donation_dates:
+            latest_donation_date = max(all_donation_dates)
+            c.execute("UPDATE users SET next_donation = ? WHERE id = ?", (latest_donation_date, user_id))
+            con.commit()
+        else:
+            # Se não houver doações, remover `next_donation`
+            c.execute("UPDATE users SET next_donation = NULL WHERE id = ?", (user_id,))
+            con.commit()
+
+        con.close()
         return redirect(url_for('historic'))
 
     con.close()
@@ -424,7 +491,26 @@ def delete_donation(donation_id):
     con = sqlite3.connect('users.db')
     c = con.cursor()
 
+    # Deletar a doação selecionada
     c.execute("DELETE FROM agendamentos WHERE rowid = ?", (donation_id,))
+    con.commit()
+
+    # Verificar e atualizar `next_donation` após a exclusão
+    email = session.get('email')
+    c.execute("SELECT id FROM users WHERE email=?", (email,))
+    user_id = c.fetchone()[0]
+
+    # Obter todas as datas de doação restantes do usuário
+    c.execute("SELECT date FROM agendamentos WHERE users_id = ?", (user_id,))
+    all_donation_dates = [datetime.strptime(row[0], '%Y-%m-%d').date() for row in c.fetchall()]
+
+    # Atualizar `next_donation` com a data mais recente ou definir como NULL se não houver doações
+    if all_donation_dates:
+        latest_donation_date = max(all_donation_dates)
+        c.execute("UPDATE users SET next_donation = ? WHERE id = ?", (latest_donation_date, user_id))
+    else:
+        c.execute("UPDATE users SET next_donation = NULL WHERE id = ?", (user_id,))
+    
     con.commit()
     con.close()
 

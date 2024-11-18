@@ -250,48 +250,44 @@
 
                                         userMarker = L.marker([userLat, userLon], { icon: marker_end }).addTo(map); 
 
-                                        const clinicsWithDistance = [];
-
                                         fetchClinicsFromDB().then(clinics => {
-                                            clinics.forEach((clinic) => {
-                                                const { nome, cep } = clinic;
-
-                                                fetch(`https://viacep.com.br/ws/${cep}/json/`)
+                                            const clinicPromises = clinics.map(clinic => {
+                                                return fetch(`https://viacep.com.br/ws/${clinic.cep}/json/`)
                                                     .then(response => response.json())
                                                     .then(data => {
                                                         if (!data.erro) {
                                                             const { logradouro, localidade, uf } = data;
                                                             const clinicEnd = `${logradouro}, ${localidade} - ${uf}`;
-                                                            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${clinicEnd}`)
+                                                            return fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${clinicEnd}`)
                                                                 .then(response => response.json())
                                                                 .then(locationData => {
                                                                     if (locationData.length > 0) {
                                                                         const { lat: clinicLat, lon: clinicLon } = locationData[0];
                                                                         const distance = haversine(userLat, userLon, clinicLat, clinicLon);
-                                                                        clinicsWithDistance.push({ clinicEnd, distance, name: nome });
 
                                                                         const clinicMarker = L.marker([clinicLat, clinicLon], { icon: marker_clinicas }).addTo(map);
-                                                                        map.setZoom(12);
                                                                         clinicMarkers.push(clinicMarker);
 
-                                                                        displayClinics(clinicsWithDistance);
+                                                                        return { name: clinic.nome, address: clinicEnd, distance };
                                                                     } else {
-                                                                        console.error(`Localização não encontrada para o CEP ${cep}.`);
+                                                                        console.error(`Localização não encontrada para o CEP ${clinic.cep}.`);
+                                                                        return null;
                                                                     }
-                                                                })
-                                                                .catch(error => {
-                                                                    console.error(`Erro ao buscar localização para o CEP ${cep}:`, error);
                                                                 });
                                                         } else {
-                                                            console.error(`CEP ${cep} não encontrado!`);
+                                                            console.error(`CEP ${clinic.cep} não encontrado!`);
+                                                            return null;
                                                         }
-                                                    })
-                                                    .catch(error => {
-                                                        console.error(`Erro ao buscar CEP ${cep}:`, error);
                                                     });
                                             });
+
+                                            Promise.all(clinicPromises).then(clinicData => {
+                                                const validClinics = clinicData.filter(clinic => clinic !== null);
+                                                validClinics.sort((a, b) => a.distance - b.distance);
+                                                displayClinics(validClinics);
+                                            });
                                         });
-                                    } else {
+                                    } else {    
                                         alert('Localização não encontrada.');
                                     }
                                 })

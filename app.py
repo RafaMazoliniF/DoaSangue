@@ -1,8 +1,5 @@
-import threading
-import time
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash, get_flashed_messages
 import sqlite3, requests, re, smtplib
-import time
 from datetime import datetime
 from geopy.geocoders import Nominatim
 from email.mime.text import MIMEText
@@ -11,6 +8,7 @@ from email.mime.multipart import MIMEMultipart
 app = Flask(__name__)
 app.secret_key = "senhasecreta"
 
+#no profile, ao alterar a senha, não está verificando se as senhas estão iguais
 def get_cep(endereco):
     url = f"https://nominatim.openstreetmap.org/search?format=json&q={endereco}"
     resp = requests.get(url)
@@ -28,73 +26,16 @@ def get_cep(endereco):
             
     return None
 
-@app.route('/send_email', methods=['POST'])
-def send_email():
-    smtp_server = "smtp.gmail.com"
-    port = 587  
-    sender = "solidaria.gota@gmail.com"
-    password = "hybd wqnw piyj ptzr"
+def verify_email(email):
+    regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
 
-    data = request.get_json()
-    receiver = data.get("email")
-    full_name = data.get("full_name")   
-
-    if not receiver:
-        return jsonify({"error": "Email destinatário é necessário"}), 400
-    
-    message = MIMEMultipart()
-    message["Subject"] = "A ESPERA ACABOU!! 🎉"
-    message["From"] = sender
-    message["To"] = receiver
-
-    html = f""" 
-    <html>
-        <body style="font-family: Arial, sans-serif; background-color: #ffffff; color: #333; margin: 0; padding: 20px;">
-            <table align="center" style="max-width: 600px; background-color: #f7f7f7; border-radius: 8px; padding: 20px; border: 1px solid #ddd;">
-                <tr>
-                    <td style="padding: 20px; text-align: center; background-color: #ff0000; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-                        <h1 style="margin: 0; font-size: 28px; text-shadow: 1px 1px 2px #333;">Gota Solidária</h1>
-                        <p style="margin: 5px 0; font-size: 18px; text-shadow: 0.5px 0.5px 1px #555;">Sua ajuda é essencial, e estamos felizes em contar com você!</p>
-                    </td>
-                </tr>
-                
-                <tr>
-                    <td style="padding: 20px;">
-                        <p style="font-size: 18px;">Olá <strong style="color: #ff0000;">{full_name}</strong>,</p>
-                        <p style="font-size: 18px;">Os 3 meses mínimos de intervalo já acabaram, e você está apto para doar novamente!</p>
-                        
-                        <p style="text-align: center; margin: 30px 0;">
-                            <a href="http://127.0.0.1:5000/booking" style="display: inline-block; padding: 12px 30px; background-color: #ff0000; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 18px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);">Agende sua consulta agora</a>
-                        </p>
-                        
-                        <p style="font-size: 18px; text-shadow: 0.5px 0.5px 1px #aaa;">Estamos ansiosos para vê-lo novamente e agradecemos seu compromisso em salvar vidas.</p>
-                        
-                        <p style="font-size: 16px; color: #555; text-align: center; margin-top: 20px;">
-                            Atenciosamente,<br>Equipe Gota Solidária
-                        </p>
-                    </td>
-                </tr>
-            </table>
-        </body>
-    </html>
-    """
-    
-    message.attach(MIMEText(html, "html"))
-    
-    try:
-        with smtplib.SMTP(smtp_server, port) as s:
-            s.starttls()
-            s.login(sender, password)
-            s.sendmail(sender, receiver, message.as_string())
-        return jsonify({"message": "Email enviado com sucesso"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return bool(re.match(regex, email))
 
 def init_db():
     con = sqlite3.connect('users.db')
     c = con.cursor()
-    c.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT, password TEXT, email TEXT, dob TEXT, next_donation TEXT)")
-    c.execute("CREATE TABLE IF NOT EXISTS clinicas (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL UNIQUE, telefone TEXT, endereco TEXT, horario TEXT, cep TEXT NOT NULL)")
+    c.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT, password TEXT, email TEXT, dob TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS clinicas (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL UNIQUE, telefone TEXT, endereco TEXT, horario TEXT, cep TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS agendamentos (users_id INTEGER, clinicas_id INTEGER, date TEXT, observacao TEXT, FOREIGN KEY (clinicas_id) REFERENCES clinicas(id) ON DELETE SET NULL, FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE SET NULL)")
     c.execute("INSERT OR REPLACE INTO sqlite_sequence (name, seq) VALUES ('clinicas', 0)")
     con.commit()
@@ -127,6 +68,68 @@ def add_clinicas():
     
     con.commit()
     con.close()
+
+@app.route('/send_email', methods=['POST'])
+def send_email():
+    smtp_server = "smtp.gmail.com"
+    port = 587  
+    sender = "solidaria.gota@gmail.com"
+    password = "hybd wqnw piyj ptzr"
+
+    data = request.get_json()
+    receiver = data.get("email")
+    full_name = data.get("full_name")   
+    #date = get_date()
+
+    if not receiver:
+        return jsonify({"error": "Email destinatário é necessário"}), 400
+
+    message = MIMEMultipart()
+    message["Subject"] = "A ESPERA ACABOU!! 🎉"
+    message["From"] = sender
+    message["To"] = receiver
+
+    html = f""" 
+    <html>
+        <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; color: #333; margin: 0; padding: 20px;">
+            <table align="center" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #ddd;">
+                <tr>
+                    <td style="padding: 20px; text-align: center; background-color: #ff0000; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                        <h1 style="margin: 0; font-size: 28px;">Gota Solidária</h1>
+                        <p style="margin: 5px 0; font-size: 18px;">Sua ajuda é essencial, e estamos felizes em contar com você!</p>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td style="padding: 20px;">
+                        <p style="font-size: 18px;">Olá <strong>{full_name}</strong>,</p>
+                        <p style="font-size: 18px;">Os 3 meses mínimos de intervalo já acabaram, e você está apto para doar novamente!</p>
+                        
+                        <p style="text-align: center; margin: 30px 0;">
+                            <a href="http://127.0.0.1:5000/booking" style="display: inline-block; padding: 12px 30px; background-color: #28a745; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 18px;">Agende sua consulta agora</a>
+                        </p>
+                        
+                        <p style="font-size: 18px;">Estamos ansiosos para vê-lo novamente e agradecemos seu compromisso em salvar vidas.</p>
+                        
+                        <p style="font-size: 16px; color: #555; text-align: center; margin-top: 20px;">
+                            Atenciosamente,<br>Equipe Gota Solidária
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </body>
+    </html>
+    """
+    message.attach(MIMEText(html, "html"))
+    
+    try:
+        with smtplib.SMTP(smtp_server, port) as s:
+            s.starttls()
+            s.login(sender, password)
+            s.sendmail(sender, receiver, message.as_string())
+        return jsonify({"message": "Email enviado com sucesso"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     
 @app.route('/')
 def home():
@@ -176,7 +179,7 @@ def register():
                     if c.fetchone() is not None:
                         error_user = "Usuário já existe!"
                     else:
-                        c.execute("INSERT INTO users VALUES (?,?,?,?,?,NULL)", (None, full_name, password, email, dob))
+                        c.execute("INSERT INTO users VALUES (?,?,?,?,?)", (None, full_name, password, email, dob))
                         con.commit()
                         success_message = "Cadastro realizado com sucesso!"
                         return render_template('register.html', success_message=success_message)
@@ -190,30 +193,36 @@ def register():
     con.close()
     return render_template('register.html', error_password=error_password, error_user=error_user, full_name=full_name, email=email, dob=dob)
 
+#fazer verificação se a senha/ usuario estao certo ou se nem existe o usuario - DONE
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     con = sqlite3.connect('users.db')
     c = con.cursor()
 
-    error_login = None
+    error_login, error_cred = None, None
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
 
         c.execute("SELECT * FROM users WHERE email=?", (email,))
-        user = c.fetchone()
+        user_data = c.fetchone()
 
-        if user is None:
-            error_login = "Email ou senha incorretos"
+        if user_data is None:
+            error_login = "Usuário não cadastrado! Crie sua conta agora."
         else:
-            session['email'] = email
-            session['full_name'] = user[1]
-            session['user_id'] = user[0]  
-            con.close()
-            return redirect(url_for('profile', user_id=user[0]))  
-        
+            c.execute("SELECT * FROM users WHERE email=? AND password=?", (email, password))
+            valid_user = c.fetchone()
+
+            if valid_user is None:
+                error_cred = "Senha incorreta!"
+            else:
+                session['email'] = email
+                session['full_name'] = valid_user[1]
+                session['user_id'] = valid_user[0]
+                con.close()
+                return redirect(url_for('profile', user_id=valid_user[0]))  
     con.close()
-    return render_template('login.html', error_login=error_login)
+    return render_template('login.html', error_login=error_login, error_cred=error_cred)
 
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
@@ -237,22 +246,12 @@ def profile():
         att_full_name = request.form['full_name']
         password = request.form['password']
         dob = request.form['dob']
-        conf_password = request.form['confirm_password']
 
-        if password == conf_password:
-            valid_password = True
-        else:
-            valid_password= False
-
-        if att_full_name!= user_data[1] or password!= user_data[2] or dob!= user_data[3]:
-            if valid_password:
-                c.execute("UPDATE users SET full_name=?, password=?, dob=? WHERE id=?", (att_full_name, password, dob, user_id))
-                con.commit()
-                success_message = "Dados atualizados com sucesso!"
-                user_data = (user_id, att_full_name, password, user_data[3], dob)
-            else:
-                error_password = "Senhas precisam ser iguais!"
-                return render_template('profile.html', error_password=error_password, full_name=att_full_name, email=user_data[3], dob=dob, password=password)
+        if att_full_name != user_data[1] or password != user_data[2] or dob != user_data[3]:
+            c.execute("UPDATE users SET full_name=?, password=?, dob=? WHERE id=?", (att_full_name, password, dob, user_id))
+            con.commit()
+            success_message = "Dados atualizados com sucesso!"
+            user_data = (user_id, att_full_name, password, user_data[3], dob)
         else:
             success_message = "Nenhuma alteração detectada."
 
@@ -295,30 +294,13 @@ def booking():
                         if clinica_id:
                             clinica_id = clinica_id[0]
 
-                            c.execute("SELECT id, next_donation FROM users WHERE email=?", (email,))
+                            c.execute("SELECT id FROM users WHERE email=?", (email,))
                             result = c.fetchone()
                             result_id = result[0]
-                            next_donation_str = result[1]
 
-                            # Inserir o novo agendamento
-                            c.execute(
-                                "INSERT INTO agendamentos (users_id, clinicas_id, date, observacao) VALUES (?, ?, ?, ?)", 
-                                (result_id, clinica_id, date_str, observation)
-                            )
+                            c.execute("INSERT INTO agendamentos (users_id, clinicas_id, date, observacao) VALUES (?, ?, ?, ?)", 
+                                (result_id, clinica_id, date_str, observation))
                             con.commit()
-
-                            # Verificar e atualizar `next_donation`, se necessário
-                            if next_donation_str:
-                                next_donation = datetime.strptime(next_donation_str, '%Y-%m-%d').date()
-                            else:
-                                next_donation = None
-
-                            if not next_donation or booking_date.date() > next_donation:
-                                c.execute(
-                                    "UPDATE users SET next_donation=? WHERE id=?", 
-                                    (date_str, result_id)
-                                )
-                                con.commit()
 
                             success_message = "Agendamento salvo com sucesso!"
                             return render_template('agendamento.html', clinicas=clinicas, success_message=success_message)
@@ -371,7 +353,6 @@ def add_donation():
 
     success_message = None
     error_date = None
-    error_clinica = None
 
     if request.method == 'POST':
         clinica = request.form.get('clinica')
@@ -392,30 +373,12 @@ def add_donation():
                     if clinica_id:
                         clinica_id = clinica_id[0]
 
-                        c.execute("SELECT id, next_donation FROM users WHERE email=?", (email,))
-                        user_result = c.fetchone()
-                        user_id = user_result[0]
-                        next_donation_str = user_result[1]
+                        c.execute("SELECT id FROM users WHERE email=?", (email,))
+                        user_id = c.fetchone()[0]
 
-                        # Inserir a doação
-                        c.execute(
-                            "INSERT INTO agendamentos (users_id, clinicas_id, date, observacao) VALUES (?, ?, ?, ?)", 
-                            (user_id, clinica_id, date_str, observation)
-                        )
+                        c.execute("INSERT INTO agendamentos (users_id, clinicas_id, date, observacao) VALUES (?, ?, ?, ?)", 
+                                  (user_id, clinica_id, date_str, observation))
                         con.commit()
-
-                        # Verificar e atualizar `next_donation`, se necessário
-                        if next_donation_str:
-                            next_donation = datetime.strptime(next_donation_str, '%Y-%m-%d').date()
-                        else:
-                            next_donation = None
-
-                        if not next_donation or booking_date.date() > next_donation:
-                            c.execute(
-                                "UPDATE users SET next_donation=? WHERE id=?", 
-                                (date_str, user_id)
-                            )
-                            con.commit()
 
                         success_message = "Doação adicionada com sucesso!"
                     else:
@@ -424,24 +387,17 @@ def add_donation():
                 error_date = "Formato de data inválido. Use o formato AAAA-MM-DD."
 
     con.close()
-    return render_template('add_donation.html', clinicas=clinicas, success_message=success_message, error_date=error_date, error_clinica=error_clinica)
+    return render_template('add_donation.html', clinicas=clinicas, success_message=success_message, error_date=error_date)
 
 @app.route('/edit_donation/<int:donation_id>', methods=['GET', 'POST'])
 def edit_donation(donation_id):
     con = sqlite3.connect('users.db')
     c = con.cursor()
 
-    # Obter as clínicas disponíveis
     c.execute("SELECT nome FROM clinicas")
     clinicas = c.fetchall()
 
-    # Obter os detalhes da doação atual
-    c.execute("""
-        SELECT clinicas.nome, agendamentos.date, agendamentos.observacao 
-        FROM agendamentos 
-        JOIN clinicas ON agendamentos.clinicas_id = clinicas.id 
-        WHERE agendamentos.rowid = ?
-    """, (donation_id,))
+    c.execute("SELECT clinicas.nome, agendamentos.date, agendamentos.observacao FROM agendamentos JOIN clinicas ON agendamentos.clinicas_id = clinicas.id WHERE agendamentos.rowid = ?", (donation_id,))
     donation = c.fetchone()
 
     if request.method == 'POST':
@@ -449,38 +405,14 @@ def edit_donation(donation_id):
         date_str = request.form.get('data')
         observation = request.form.get('observacao')
 
-        # Buscar o ID da clínica selecionada
         c.execute("SELECT id FROM clinicas WHERE nome=?", (clinica,))
         clinica_id = c.fetchone()[0]
 
-        # Atualizar os dados da doação
-        c.execute("""
-            UPDATE agendamentos 
-            SET clinicas_id = ?, date = ?, observacao = ? 
-            WHERE rowid = ?
-        """, (clinica_id, date_str, observation, donation_id))
+        c.execute("UPDATE agendamentos SET clinicas_id = ?, date = ?, observacao = ? WHERE rowid = ?", 
+                  (clinica_id, date_str, observation, donation_id))
         con.commit()
-
-        # Verificar todas as datas de doações do usuário para definir a próxima data de doação
-        email = session.get('email')
-        c.execute("SELECT id FROM users WHERE email=?", (email,))
-        user_id = c.fetchone()[0]
-
-        # Obter todas as datas de doação do usuário
-        c.execute("SELECT date FROM agendamentos WHERE users_id = ?", (user_id,))
-        all_donation_dates = [datetime.strptime(row[0], '%Y-%m-%d').date() for row in c.fetchall()]
-
-        # Definir o `next_donation` para a data mais recente, se houver doações
-        if all_donation_dates:
-            latest_donation_date = max(all_donation_dates)
-            c.execute("UPDATE users SET next_donation = ? WHERE id = ?", (latest_donation_date, user_id))
-            con.commit()
-        else:
-            # Se não houver doações, remover `next_donation`
-            c.execute("UPDATE users SET next_donation = NULL WHERE id = ?", (user_id,))
-            con.commit()
-
         con.close()
+
         return redirect(url_for('historic'))
 
     con.close()
@@ -491,32 +423,13 @@ def delete_donation(donation_id):
     con = sqlite3.connect('users.db')
     c = con.cursor()
 
-    # Deletar a doação selecionada
     c.execute("DELETE FROM agendamentos WHERE rowid = ?", (donation_id,))
-    con.commit()
-
-    # Verificar e atualizar `next_donation` após a exclusão
-    email = session.get('email')
-    c.execute("SELECT id FROM users WHERE email=?", (email,))
-    user_id = c.fetchone()[0]
-
-    # Obter todas as datas de doação restantes do usuário
-    c.execute("SELECT date FROM agendamentos WHERE users_id = ?", (user_id,))
-    all_donation_dates = [datetime.strptime(row[0], '%Y-%m-%d').date() for row in c.fetchall()]
-
-    # Atualizar `next_donation` com a data mais recente ou definir como NULL se não houver doações
-    if all_donation_dates:
-        latest_donation_date = max(all_donation_dates)
-        c.execute("UPDATE users SET next_donation = ? WHERE id = ?", (latest_donation_date, user_id))
-    else:
-        c.execute("UPDATE users SET next_donation = NULL WHERE id = ?", (user_id,))
-    
     con.commit()
     con.close()
 
     return redirect(url_for('historic'))
 
-@app.route('/clinicias_proximas')
+@app.route('/clinicas_proximas')
 def clinicas_proximas():
     con = sqlite3.connect('users.db')
     c = con.cursor()
@@ -534,14 +447,126 @@ def clinicas_proximas():
 @app.route('/get_clinics', methods=['GET'])
 def get_clinics():
     con = sqlite3.connect('users.db')
-    cursor = con.cursor()
-    cursor.execute("SELECT nome, endereco, cep FROM clinicas")
-    clinics = cursor.fetchall()
+    c = con.cursor()
+
+    c.execute("SELECT nome, endereco, cep FROM clinicas")
+    clinics = c.fetchall()
     con.close()
 
     clinics_list = [{'nome': nome, 'endereco': endereco, 'cep': cep} for nome, endereco, cep in clinics]
     return jsonify(clinics_list)
 
+#precisa arrumar o forgot e recovery (mensagens de erro e sucesso n aparecem)
+#email em recovery_password não ta sendo passado como parametro corretamente
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    con = sqlite3.connect('users.db')
+    c = con.cursor()
+
+    sucess_message, error_message = "", ""
+
+    if request.method == 'POST':
+        email = request.form['email']
+
+        c.execute("SELECT full_name FROM users WHERE email=?", (email,))
+        full_name = c.fetchone()[0]
+
+        if verify_email(email):
+            email_forgot_password(email, full_name)
+            sucess_message = "Email enviado com sucesso"
+        else:
+            error_message = "Email inválido"
+
+    con.close()
+    return render_template('forgot_password.html', sucess_message=sucess_message, error_message=error_message)
+
+@app.route('/recovery_password/<email>', methods=['GET', 'POST'])
+def recovery_password(email):
+    sucess_message, error_message = "", ""
+
+    with sqlite3.connect('users.db') as con:
+        c = con.cursor()
+
+        if request.method == 'POST':
+            password = request.form['password']
+            conf_password = request.form['conf_password']
+
+            c.execute("SELECT password FROM users WHERE email=?", (email,))
+            result = c.fetchone()
+
+            if not result:
+                error_message = "Email não encontrado no sistema."
+                return render_template('recovery_password.html', sucess_message=sucess_message, error_message=error_message)
+
+            actual_password = result[0]
+
+            if password == conf_password:
+                if password != actual_password:  
+                    c.execute("UPDATE users SET password=? WHERE email=?", (password, email))
+                    con.commit()
+                    sucess_message = "Senha alterada com sucesso!"
+                else:
+                    error_message = "A nova senha não pode ser igual à antiga."
+            else:
+                error_message = "As senhas devem ser iguais."
+
+    return render_template('recovery_password.html', sucess_message=sucess_message, error_message=error_message)
+
+def email_forgot_password(email, full_name):
+    smtp_server = "smtp.gmail.com"
+    port = 587  
+    sender = "solidaria.gota@gmail.com"
+    password = "hybd wqnw piyj ptzr"
+
+    message = MIMEMultipart()
+    message["Subject"] = "RECUPERAÇÃO DE SENHA"
+    message["From"] = sender
+    message["To"] = email
+
+    html = f""" 
+    <html>
+        <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; color: #333; margin: 0; padding: 20px;">
+            <table align="center" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #ddd;">
+                <tr>
+                    <td style="padding: 20px; text-align: center; background-color: #ff0000; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                        <h1 style="margin: 0; font-size: 28px;">Gota Solidária</h1>
+                        <p style="margin: 5px 0; font-size: 18px;">Sua ajuda é essencial, e estamos felizes em contar com você!</p>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td style="padding: 20px;">
+                        <p style="font-size: 18px;">Olá <strong>{full_name}</strong>,</p>
+                        <p style="font-size: 18px;">Parece que voçê esqueceu sua senha, clique no botão abaixo para redefiní-la</p>
+                        
+                        <p style="text-align: center; margin: 30px 0;">
+                            <a href="http://127.0.0.1:5000/recovery_password/{email}" style="display: inline-block; padding: 12px 30px; background-color: #28a745; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 18px;">Redefina sua senha agora</a>
+                        </p>
+                        
+                        <p style="font-size: 18px;">Estamos ansiosos para vê-lo novamente e agradecemos seu compromisso em salvar vidas.</p>
+
+                        <p style="font-size: 18px;">Caso não queira redefinir a senha, ignore esta mensagem</p>
+                        
+                        <p style="font-size: 16px; color: #555; text-align: center; margin-top: 20px;">
+                            Atenciosamente,<br>Equipe Gota Solidária
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </body>
+    </html>
+    """
+    message.attach(MIMEText(html, "html"))
+    
+    try:
+        with smtplib.SMTP(smtp_server, port) as s:
+            s.starttls()
+            s.login(sender, password)
+            s.sendmail(sender, email, message.as_string())
+        return jsonify({"message": "Email enviado com sucesso"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
 @app.route('/logout')
 def logout():
     session.clear()
@@ -551,4 +576,3 @@ if __name__ == '__main__':
     init_db()
     add_clinicas()
     app.run(debug=True)
-

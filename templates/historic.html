@@ -137,7 +137,6 @@
             text-align: center;
             position: relative;
         }
-
         .profile-image-container {
             position: fixed;
             bottom: 10px;
@@ -157,6 +156,7 @@
             <img src="{{ url_for('static', filename='medic.png') }}" class="profile-image">
         </a>
     </div>
+    
     <div class="history-container">
         <a href="{{ url_for('profile', full_name=session['full_name']) }}" class="back-button">
             <i class="fas fa-arrow-left"></i>

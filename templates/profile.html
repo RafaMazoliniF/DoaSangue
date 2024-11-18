@@ -35,8 +35,8 @@
         }
 
         .profile-image {
-            width: 230px;
-            height: 330px;
+            width: 200px;
+            height: 300px;
             border-radius: 1px;
         }
 
@@ -72,7 +72,7 @@
             color: #888;
         }
 
-        #edit-btn, #logout-btn, #book-btn{
+        #edit-btn, #logout-btn, #book-btn {
             width: 100%;
             padding: 10px;
             margin-top: 30px;
@@ -94,9 +94,13 @@
             cursor: pointer;
         }
 
-        #edit-btn { background-color: #007bff;}
+        #edit-btn {
+            background-color: #007bff;
+        }
 
-        #edit-btn:hover { background-color: #0056b3;}
+        #edit-btn:hover {
+            background-color: #0056b3;
+        }
 
         #save-btn {
             width: 100%;
@@ -111,35 +115,45 @@
             display: none;
         }
 
-        #save-btn:hover { background-color: #218838;}
+        #save-btn:hover {
+            background-color: #218838;
+        }
 
         #logout-btn {
             background-color: #dc3545;
             margin-top: 15px;
         }
 
-        #logout-btn:hover { background-color: #c82333; }
+        #logout-btn:hover {
+            background-color: #c82333;
+        }
 
         #book-btn {
             background-color: #28a745; 
             margin-top: 15px;
         }
 
-        #book-btn:hover { background-color: #218838; }
+        #book-btn:hover {
+            background-color: #218838;
+        }
 
         #hist-btn {
             background-color: #f1ee2f; 
             margin-top: 15px;
         }
 
-        #hist-btn:hover { background-color: #c5c329; }
+        #hist-btn:hover {
+            background-color: #c5c329;
+        }
 
         #prox_clinicas-btn {
             background-color: orange; 
             margin-top: 15px;
         }
 
-        #prox_clinicas-btn:hover { background-color: darkorange; }
+        #prox_clinicas-btn:hover { 
+            background-color: darkorange; 
+        }
 
         .icon {
             font-size: 50px;
@@ -147,7 +161,9 @@
             margin-bottom: 10px;
         }
 
-        #confirm-password { display: none; }
+        #confirm-password { 
+            display: none; 
+        }
 
         .error {
             color: red;
@@ -161,10 +177,10 @@
             <img src="{{ url_for('static', filename='medic.png') }}" class="profile-image">
         </a>
     </div>
-
     <div class="profile-container">
         <i class="fas fa-house icon"></i>
         <h2>Olá, {{ full_name }}!</h2>
+
         <form method="POST">
             <label for="full_name">Nome</label>
             <input type="full_name" id="full_name" name="full_name" value="{{ full_name }}" readonly>
@@ -179,7 +195,6 @@
                 <label for="confirm_password">Confirmar Senha</label>
                 <input type="password" id="confirm_password" name="confirm_password" value="{{ password }}">
             </div>
-
             {% if error_password %}
                 <div style="margin-top: 12px;" class="error">{{ error_password }}</div>
                 <script>
@@ -193,6 +208,7 @@
             <input type="dob" id="dob" name="dob" value="{{ dob }}" readonly>
 
             <button type="button" id="edit-btn" onclick="enableEdit()">Atualizar Dados</button>
+
             <input type="submit" id="save-btn" value="Salvar Alterações">
         </form>
 
@@ -223,6 +239,7 @@
 
             document.getElementById('save-btn').style.display = 'block';
             document.getElementById('edit-btn').style.display = 'none';
+
             document.getElementById('password').type = 'text';
 
             document.getElementById('confirm-password').style.display = 'block';
@@ -239,7 +256,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ email: email, full_name: full_name })
+                body: JSON.stringify({ email: email, full_name: full_name})
             })
             .then(response => response.json())
             .then(data => {
@@ -254,6 +271,6 @@
             });
         }
     </script>
+
 </body>
 </html>
-
